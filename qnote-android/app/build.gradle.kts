@@ -21,8 +21,8 @@ android {
         applicationId = "dev.neonfire.qnote"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     signingConfigs {
@@ -60,6 +60,9 @@ android {
 
     buildFeatures {
         compose = true
+        // AGP 9 no longer generates BuildConfig by default; the About screen
+        // shows VERSION_NAME so the licence notice states which build it is.
+        buildConfig = true
     }
 
     testOptions {

@@ -7,6 +7,7 @@ qnote-watch/build/
 qnote-android/build/
 qnote-android/app/build/
 qnote-android/local.properties
+qnote-android/.kotlin/
 *.apk
 *.aab
 

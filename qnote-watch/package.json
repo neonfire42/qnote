@@ -1,11 +1,10 @@
 {
   "name": "qnote",
   "author": "neonfire42",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "keywords": [
     "pebble-app"
   ],
-  "private": true,
   "dependencies": {},
   "pebble": {
     "displayName": "qnote",
@@ -42,5 +41,6 @@
     "resources": {
       "media": []
     }
-  }
+  },
+  "license": "GPL-3.0-or-later"
 }

@@ -1,9 +1,12 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 neonfire42
 package dev.neonfire.qnote.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -44,6 +47,7 @@ class MainActivity : ComponentActivity() {
                         coldStart = coldStart,
                         onShareText = ::shareText,
                         onCopyText = ::copyText,
+                        onOpenUrl = ::openUrl,
                     )
                 }
             }
@@ -58,6 +62,10 @@ class MainActivity : ComponentActivity() {
         startActivity(Intent.createChooser(intent, "Share note"))
     }
 
+    private fun openUrl(url: String) {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+
     private fun copyText(text: String) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("qnote", text))
@@ -70,10 +78,12 @@ private fun QNoteApp(
     coldStart: Boolean,
     onShareText: (String) -> Unit,
     onCopyText: (String) -> Unit,
+    onOpenUrl: (String) -> Unit,
 ) {
     val viewModel: NotesViewModel = viewModel()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     var openNoteId by remember { mutableStateOf<String?>(null) }
+    var showingAbout by remember { mutableStateOf(false) }
 
     val pebble = QNoteApplication.from(
         androidx.compose.ui.platform.LocalContext.current
@@ -106,6 +116,14 @@ private fun QNoteApp(
         }
     }
 
+    if (showingAbout) {
+        AboutScreen(
+            onBack = { showingAbout = false },
+            onOpenSource = { onOpenUrl(QNOTE_SOURCE_URL) },
+        )
+        return
+    }
+
     val note = openNoteId?.let { viewModel.noteById(it) }
     if (note == null) {
         // Covers both "nothing open" and a note deleted while its screen was up.
@@ -114,6 +132,7 @@ private fun QNoteApp(
             viewModel = viewModel,
             onOpenNote = { openNoteId = it.id },
             onShareText = onShareText,
+            onOpenAbout = { showingAbout = true },
         )
     } else {
         NoteDetailScreen(

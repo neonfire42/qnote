@@ -66,6 +66,12 @@ qnote asks once which Pebble app may exchange notes with it, and talks to that
 one only. Your notes stay on your phone and your watch. There is no account, no
 server, and no analytics.
 
+FREE SOFTWARE
+
+qnote is licensed under the GNU General Public License v3. The source for both
+the watchapp and this app is at https://github.com/neonfire42/qnote — read it,
+change it, pass it on.
+
 The watchapp is a separate install from the Pebble app store.
 ```
 

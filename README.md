@@ -266,3 +266,34 @@ standard phone screenshot size. One caveat: an `AlertDialog` opens a second
 window that never reports idle under Robolectric, so the category picker cannot
 be captured this way — the multi-select shot covers the same feature from the
 main window instead.
+
+## Licence
+
+qnote is free software under the **GNU General Public License, version 3 or
+later**. The full text is in [`LICENSE`](LICENSE); every source file carries an
+SPDX header.
+
+In short: you may use, study, modify and redistribute qnote, and if you
+distribute a modified version you must give its recipients the same freedoms,
+including the source. That is the point — a notepad you keep your own thoughts
+in should be something you can read and change.
+
+The GPL requires the licence to travel with a distributed binary, and qnote's
+APK is handed to people directly rather than through a store that would surface
+it. So the licence ships inside the app: **⋮ → About & licence**, readable
+offline. `app/src/main/res/raw/gpl3.txt` is a copy of `LICENSE` for that purpose
+— keep them identical.
+
+### Dependencies
+
+| | Licence | Compatible? |
+|---|---|---|
+| PebbleKit Android 2 | Apache 2.0 | Yes — Apache 2.0 code may be combined into a GPLv3 work |
+| AndroidX / Compose | Apache 2.0 | Yes |
+| Pebble SDK headers | Apache 2.0 | Yes |
+| Roborazzi, Robolectric | Apache 2.0 | Yes (test only) |
+| `gradle-wrapper.jar` (committed) | Apache 2.0 | Yes — keeps its own licence |
+
+Apache 2.0 is one-way compatible with GPLv3: it can flow into this project, but
+not the reverse. That is fine here — nothing in qnote is meant to be re-used
+under weaker terms.

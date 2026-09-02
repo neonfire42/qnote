@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 neonfire42
 package dev.neonfire.qnote.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -61,6 +64,7 @@ fun NoteListScreen(
     viewModel: NotesViewModel,
     onOpenNote: (Note) -> Unit,
     onShareText: (String) -> Unit,
+    onOpenAbout: () -> Unit = {},
 ) {
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -135,6 +139,14 @@ fun NoteListScreen(
                                 onClick = {
                                     menuOpen = false
                                     onShareText(viewModel.exportMarkdown())
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("About & licence") },
+                                leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onOpenAbout()
                                 },
                             )
                             DropdownMenuItem(

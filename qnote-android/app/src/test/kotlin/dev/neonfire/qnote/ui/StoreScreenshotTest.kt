@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 neonfire42
 package dev.neonfire.qnote.ui
 
 import androidx.compose.foundation.layout.fillMaxSize

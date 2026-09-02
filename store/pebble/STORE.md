@@ -47,7 +47,15 @@ GitHub — it is not on the Play Store, so Android will ask you to allow
 installing it from your browser or file manager. Full instructions are on the
 project page.
 
+qnote is free software under the GPLv3 — the source for both halves is on
+GitHub, and you are free to read it, change it and pass it on.
+
 Requires a Pebble with a microphone.
+
+## Licence
+
+Free software under the GNU General Public License v3 or later. Source:
+https://github.com/neonfire42/qnote
 
 ## Category
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 neonfire42
 """
 Build every store asset qnote needs, from sources kept in this repo.
 

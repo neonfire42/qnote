@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 neonfire42
 // Emits the exact bytes the watch writes for a note, as a hex string for the
 // Android codec test (qnote-android/.../NoteRecordCodecTest.kt).
 //
