@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:name=".QNoteApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.QNote">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.QNote">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          The Pebble app binds this to hand over AppMessages and datalogging
+          batches. It must be exported for that cross-process bind to work; the
+          library authenticates the caller, and PebbleAndroidAppPicker pins
+          which Pebble app we accept.
+        -->
+        <service
+            android:name=".pebble.QNoteListenerService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="io.rebble.pebblekit2.RECEIVE_DATA_FROM_WATCH" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

@@ -1,0 +1,16 @@
+# Pebble
+qnote-watch/build/
+*.pbw
+
+# Android / Gradle
+.gradle/
+qnote-android/build/
+qnote-android/app/build/
+qnote-android/local.properties
+*.apk
+*.aab
+
+# Editors
+.idea/
+*.iml
+.DS_Store

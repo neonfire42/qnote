@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Vivid Cerulean, the accent the watchapp uses for its menu highlight. -->
+    <color name="ic_launcher_background">#41BBEC</color>
+</resources>

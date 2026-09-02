@@ -1,0 +1,37 @@
+{
+  "name": "qnote",
+  "author": "neonfire42",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "qnote",
+    "uuid": "1ca95d44-145f-40d4-8a80-c34ccf7f0119",
+    "sdkVersion": "3",
+    "targetPlatforms": ["emery"],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "NOTE_ID",
+      "NOTE_TS",
+      "NOTE_TEXT",
+      "ACK_ID",
+      "DELETE_ID",
+      "SYNC_REQUEST"
+    ],
+    "companionApp": {
+      "android": {
+        "url": "https://github.com/neonfire42/qnote",
+        "apps": [
+          { "package": "dev.neonfire.qnote" },
+          { "package": "dev.neonfire.qnote.debug" }
+        ]
+      }
+    },
+    "resources": {
+      "media": []
+    }
+  }
+}

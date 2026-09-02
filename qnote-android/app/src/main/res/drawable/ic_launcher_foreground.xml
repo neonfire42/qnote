@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A microphone, drawn on the 108dp adaptive-icon canvas. The safe zone is
+     the centre 72dp, so the glyph sits between 36 and 72 on both axes. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,34c-4.4,0 -8,3.6 -8,8v14c0,4.4 3.6,8 8,8s8,-3.6 8,-8V42C62,37.6 58.4,34 54,34z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,54c0,7.7 -6.3,14 -14,14s-14,-6.3 -14,-14h-5c0,9.8 7.3,17.9 17,19.4V80h4v-6.6c9.7,-1.5 17,-9.6 17,-19.4H68z" />
+</vector>
