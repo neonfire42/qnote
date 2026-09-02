@@ -62,11 +62,11 @@ Speak. It's saved.
 qnote needs its Android companion to store the notes it captures. It is **not
 on the Google Play Store** — download the APK directly:
 
-https://github.com/neonfire42/qnote/releases/latest
+https://github.com/neonfire42/qnote/releases/latest/download/qnote.apk
 
 Installing it:
 
-1. Open that link on your Android phone and download `qnote.apk`.
+1. Open that link on your Android phone. It downloads `qnote.apk` directly.
 2. Android will warn that the file came from an unknown source. Allow your
    browser (or the Files app) to install apps, then confirm.
 3. Open qnote on the phone once and grant it access to your Pebble app when

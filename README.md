@@ -22,11 +22,11 @@ qnote is two installs, and you need both — the watchapp captures notes, the
 phone app is where they live.
 
 **1. The watchapp** — from the Pebble app store, or sideload
-[`qnote-watch.pbw`](https://github.com/neonfire42/qnote/releases/latest) through
+[`qnote.pbw`](https://github.com/neonfire42/qnote/releases/latest/download/qnote.pbw) through
 the Pebble mobile app.
 
 **2. The Android companion** — download
-[`qnote.apk`](https://github.com/neonfire42/qnote/releases/latest) on your phone.
+[`qnote.apk`](https://github.com/neonfire42/qnote/releases/latest/download/qnote.apk) on your phone.
 
 It is **not on the Google Play Store**, so Android will warn that it came from an
 unknown source. Allow your browser (or the Files app) to install apps when
