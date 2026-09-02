@@ -161,6 +161,15 @@ creation. To change the description, paste
 [`description.txt`](description.txt) into the dashboard:
 https://appstore-api.repebble.com/dashboard
 
+**Screenshots cannot be changed on their own.** `pebble publish` always tries to
+upload a release first, so running it against a version the store already has
+fails with `Release upload failed (400): Version X already exists for this app`
+and never reaches the `--screenshots` / `--replace-screenshots` step. The
+listing is left untouched — it is a clean abort, not a half-applied change — but
+it does mean new screenshots only go up either alongside a version bump or by
+hand in the dashboard:
+https://appstore-api.repebble.com/dashboard
+
 `--is-published` behaves differently in the two cases too. Creating a new app
 makes the app and its first release visible straight away. A later release stays
 **unpublished** until you pass `--is-published` or flip it in the dashboard, so
