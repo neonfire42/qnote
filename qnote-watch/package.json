@@ -1,7 +1,7 @@
 {
   "name": "qnote",
   "author": "neonfire42",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "keywords": [
     "pebble-app"
   ],
@@ -23,7 +23,10 @@
       "ACK_ID",
       "DELETE_ID",
       "SYNC_REQUEST",
-      "START_CAPTURE"
+      "START_CAPTURE",
+      "NOTE_CAT",
+      "CATEGORIES",
+      "ASK_CATEGORY"
     ],
     "companionApp": {
       "android": {

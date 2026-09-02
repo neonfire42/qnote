@@ -8,6 +8,8 @@ Two halves that talk over [PebbleKit Android 2](https://github.com/pebble-dev/Pe
   Opening it starts a new note: speak, confirm, done.
 - **`qnote-android/`** — a Kotlin/Compose companion that receives the notes,
   keeps them, and lets you search, categorise, edit, share and export them.
+  Swipe a note left to delete it (with a few seconds to take it back) or right
+  to file it.
 
 Both entry points go straight to capture. Opening the watchapp starts dictation
 immediately, and opening the phone app starts dictation *on the watch* — so
@@ -76,8 +78,8 @@ contract:
 | 0 | 4 | `id` — uint32, monotonic per watch |
 | 4 | 4 | `timestamp_utc` — uint32 seconds |
 | 8 | 2 | `text_len` — uint16, **bytes** not characters |
-| 10 | 1 | `flags` — bit 0 truncated, bit 1 synced |
-| 11 | 1 | `reserved` |
+| 10 | 1 | `flags` — bit 0 truncated, bit 1 synced, bit 2 spooled |
+| 11 | 1 | `category_slot` — 0 uncategorised, else a phone-assigned slot |
 | 12 | 244 | `text` — UTF-8, zero-padded |
 
 Little-endian. A watch build fails on `_Static_assert` if it is not exactly 256
@@ -143,6 +145,11 @@ pebble send-app-message --emulator emery --app-uuid <uuid> --uint 10003=1  # ACK
 pebble send-app-message --emulator emery --app-uuid <uuid> --uint 10004=1  # DELETE_ID
 pebble send-app-message --emulator emery --app-uuid <uuid> --uint 10006=1  # START_CAPTURE
 
+# The category list, as the companion pushes it. Tab-separated slot and name,
+# one per line; 10009 is the "ask for a category" switch.
+pebble send-app-message --emulator emery --app-uuid <uuid> \
+  --string 10008=$'1\tErrands\n2\tIdeas\n' --uint 10009=1
+
 pebble data-logging --emulator emery list           # the spool session
 ```
 
@@ -175,15 +182,43 @@ then the fastest path there is: one press, and you are speaking.
 
 ## Categories
 
-Categories live on the phone only. The watch record has no room for one — the
-256-byte layout is fixed by datalogging — and sorting is a job for a screen with
-a keyboard.
-
 A category is just a string on a note, so there is no management screen: typing
 a new name in the picker creates it, and deleting the last note that carries one
-retires it. Filter with the chip row above the list, set a category from the
-chip on the detail screen, or long-press notes to select several and categorise
-them in one go. Markdown export groups by category.
+retires it. Filter with the chip row above the list, set one from the chip on
+the detail screen, swipe a note right, or long-press to select several and
+categorise them in one go. Markdown export groups by category.
+
+Categories are created on the phone, where the keyboard is, but they can be
+**applied on the watch**. Confirm a dictation and qnote offers the categories it
+knows about; Back skips in one press and the note is saved either way. Turn the
+prompt off under **Ask for a category on the watch** in the overflow menu.
+
+### How a category survives the trip
+
+The record has exactly one spare byte, so the watch sends a *number*, not a
+name. A number is only meaningful against a table both ends agree on, and the
+watch's copy can be arbitrarily old: a note captured out of range reaches the
+phone whenever the spool next drains, which may be days and several category
+changes later.
+
+So the phone's slot table is **append-only**. A name is bound to a slot the
+first time it is seen and keeps it forever; retiring a category frees nothing.
+An old slot number therefore always resolves to the name it was tagged with,
+which a positional index into the live list could not promise.
+
+The phone pushes the table to the watch whenever the list changes and again
+every time the watchapp opens — the latter arrives while you are still speaking.
+It is capped at 192 bytes and filled most-recently-used first, because a watch
+persist value is 256 bytes and the note ring already spends 3 KB of the app's
+4 KB budget.
+
+The note is written to the watch's persist store *before* the picker appears, so
+backing out costs the tag and nothing else. Waiting for an answer does delay the
+submission, though, and an app that idles out with the picker open would
+otherwise leave a note the durable spool never saw — so `flags` bit 2 records
+which notes reached datalogging, and `sync_init()` spools anything that did not.
+A note whose picker was never answered keeps exactly the durability of any
+other; it just arrives uncategorised.
 
 ## Notes on the design
 

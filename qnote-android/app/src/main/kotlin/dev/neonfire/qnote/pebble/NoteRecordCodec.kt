@@ -17,7 +17,7 @@ import java.nio.ByteOrder
  *      4     4  timestamp_utc  uint32, seconds since epoch
  *      8     2  text_len       uint16, bytes used in text
  *     10     1  flags          uint8
- *     11     1  reserved       uint8, always 0
+ *     11     1  category_slot  uint8, 0 = uncategorised
  *     12   244  text           UTF-8, zero-padded
  * ```
  *
@@ -42,6 +42,11 @@ object NoteRecordCodec {
         val timestampUtc: Long,
         val text: String,
         val truncated: Boolean,
+        /**
+         * The category the note was tagged with on the watch, as a slot number
+         * into [dev.neonfire.qnote.data.CategorySlots]. 0 means uncategorised.
+         */
+        val categorySlot: Int,
     )
 
     /**
@@ -70,6 +75,7 @@ object NoteRecordCodec {
         // record into the next one.
         val textLen = buffer.short.toUShort().toInt().coerceIn(0, TEXT_MAX)
         val flags = buffer.get().toInt() and 0xFF
+        val categorySlot = buffer.get().toInt() and 0xFF
 
         val text = String(data, offset + OFFSET_TEXT, textLen, Charsets.UTF_8)
 
@@ -78,6 +84,7 @@ object NoteRecordCodec {
             timestampUtc = timestamp,
             text = text,
             truncated = flags and FLAG_TRUNCATED != 0,
+            categorySlot = categorySlot,
         )
     }
 }

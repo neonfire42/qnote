@@ -3,8 +3,10 @@
 #include <pebble.h>
 
 #include "capture.h"
+#include "categories.h"
 #include "notes.h"
 #include "sync.h"
+#include "ui_category.h"
 #include "ui_detail.h"
 #include "ui_list.h"
 
@@ -20,8 +22,10 @@ static void on_capture_requested(void) { capture_start(); }
 
 static void init(void) {
   notes_init();
+  categories_init();
   ui_list_init();
   ui_detail_init();
+  ui_category_init();
   capture_init(on_capture_result);
   sync_init(on_sync_changed, on_capture_requested);
 
@@ -36,6 +40,7 @@ static void init(void) {
 static void deinit(void) {
   sync_deinit();
   capture_deinit();
+  ui_category_deinit();
   ui_detail_deinit();
   ui_list_deinit();
 }

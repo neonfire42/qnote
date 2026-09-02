@@ -26,7 +26,20 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_AUTO_CAPTURE, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_CAPTURE, value).apply()
 
+    /**
+     * Offer a category picker on the watch after a note is confirmed.
+     *
+     * On by default: the categories are already there, and the moment you know
+     * which one a note belongs in is the moment you speak it. Back on the watch
+     * skips the picker in one press, and this switch removes it entirely for
+     * anyone who would rather keep the capture path at zero menus.
+     */
+    var askCategoryOnWatch: Boolean
+        get() = prefs.getBoolean(KEY_ASK_CATEGORY, true)
+        set(value) = prefs.edit().putBoolean(KEY_ASK_CATEGORY, value).apply()
+
     private companion object {
         const val KEY_AUTO_CAPTURE = "auto_capture"
+        const val KEY_ASK_CATEGORY = "ask_category_on_watch"
     }
 }

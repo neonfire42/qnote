@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 neonfire42
 #include "ui_detail.h"
 
+#include <stdio.h>
 #include <string.h>
 
+#include "categories.h"
 #include "sync.h"
 #include "ui_list.h"
 #include "util.h"
@@ -19,7 +21,7 @@ static ActionMenuLevel *s_action_root;
 // The note currently on screen. Held by value because a phone-driven delete can
 // change the cache underneath us while the detail window is up.
 static QNoteRecord s_note;
-static char s_stamp[24];
+static char s_stamp[40];
 static char s_body[QNOTE_TEXT_MAX + 1];
 
 static void perform_delete(ActionMenu *menu, const ActionMenuItem *action, void *context) {
@@ -90,6 +92,15 @@ static void window_unload(Window *window) {
 // the hook that fires for every note the user opens.
 static void window_appear(Window *window) {
   util_format_stamp((time_t)s_note.timestamp_utc, s_stamp, sizeof(s_stamp));
+
+  // Append the category to the stamp line rather than adding a layer: it is one
+  // short word, and the header already reads as the note's metadata.
+  const char *category = categories_name_for(s_note.category_slot);
+  if (category) {
+    const size_t used = strlen(s_stamp);
+    snprintf(s_stamp + used, sizeof(s_stamp) - used, " \xc2\xb7 %s", category);
+  }
+
   text_layer_set_text(s_stamp_layer, s_stamp);
   text_layer_set_text(s_body_layer, s_body);
 

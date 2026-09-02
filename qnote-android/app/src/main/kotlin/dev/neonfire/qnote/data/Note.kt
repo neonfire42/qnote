@@ -26,9 +26,9 @@ data class Note(
     /**
      * User-assigned category, or null for uncategorised.
      *
-     * Phone-side only. The watch record has no room for it — the 256-byte
-     * layout is fixed by datalogging — and categorising is a sorting job that
-     * belongs where there is a keyboard.
+     * Created here, where the keyboard is, but set from either end: the watch
+     * can tag a note as it is spoken, carrying the choice back as a one-byte
+     * slot number that [dev.neonfire.qnote.data.CategorySlots] resolves.
      */
     val category: String? = null,
 ) {

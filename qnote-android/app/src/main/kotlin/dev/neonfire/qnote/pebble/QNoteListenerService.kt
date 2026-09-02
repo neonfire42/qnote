@@ -26,6 +26,7 @@ class QNoteListenerService : BasePebbleListenerService() {
 
     private val store get() = QNoteApplication.from(this).noteStore
     private val pebble get() = QNoteApplication.from(this).pebbleRepository
+    private val slots get() = QNoteApplication.from(this).categorySlots
 
     override suspend fun onMessageReceived(
         watchappUUID: UUID,
@@ -40,6 +41,9 @@ class QNoteListenerService : BasePebbleListenerService() {
         val capturedAt = data.longAt(QNotePebble.KEY_NOTE_TS) ?: return ReceiveResult.Nack
         val text = (data[QNotePebble.KEY_NOTE_TEXT] as? PebbleDictionaryItem.Text)?.value
             ?: return ReceiveResult.Nack
+        // Absent from a watch older than 1.1.0, which is exactly the same thing
+        // as uncategorised.
+        val categorySlot = data.longAt(QNotePebble.KEY_NOTE_CAT)?.toInt() ?: 0
 
         val stored = withContext(Dispatchers.IO) {
             store.upsert(
@@ -52,6 +56,7 @@ class QNoteListenerService : BasePebbleListenerService() {
                     receivedAt = System.currentTimeMillis(),
                     truncated = false,
                     edited = false,
+                    category = slots.nameFor(categorySlot),
                 )
             )
         }
@@ -100,6 +105,10 @@ class QNoteListenerService : BasePebbleListenerService() {
                         receivedAt = now,
                         truncated = record.truncated,
                         edited = false,
+                        // The slot table is append-only, so this resolves to
+                        // the name the note was tagged with however long the
+                        // record sat in the spool.
+                        category = slots.nameFor(record.categorySlot),
                     )
                 )
             }
@@ -120,10 +129,35 @@ class QNoteListenerService : BasePebbleListenerService() {
     override fun onAppOpened(watchappUUID: UUID, watch: WatchIdentifier) {
         // The watch is awake and listening: a good moment to pull anything its
         // AppMessage path could not deliver earlier.
-        if (watchappUUID == QNotePebble.APP_UUID) {
-            pebble.requestSync(watch)
-        }
+        if (watchappUUID != QNotePebble.APP_UUID) return
+
+        pebble.requestSync(watch)
+
+        // And to hand it the categories. Opening the watchapp starts dictation,
+        // so this is racing a person speaking a sentence — a race it wins
+        // comfortably, and losing it only costs one note its picker.
+        val settings = QNoteApplication.from(this).settings
+        pebble.pushCategories(
+            blob = slots.blobFor(categoriesByRecentUse()),
+            askCategory = settings.askCategoryOnWatch,
+            watch = watch,
+        )
     }
+
+    /**
+     * Category names, most recently used first.
+     *
+     * The watch only has room for a handful, and the one you reached for last
+     * is the one you are most likely to reach for now.
+     */
+    private fun categoriesByRecentUse(): List<String> =
+        store.notes.value
+            .mapNotNull { note -> note.category?.let { it to note.capturedAt } }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, times) -> times.max() }
+            .entries
+            .sortedByDescending { it.value }
+            .map { it.key }
 
     private fun PebbleDictionary.longAt(key: UInt): Long? = when (val item = this[key]) {
         is PebbleDictionaryItem.UInt32 -> item.value.toLong()
