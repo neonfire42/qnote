@@ -1,6 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Release signing lives outside the repo (~/.qnote-keys/signing.properties) so
+// the key never lands in git. Without it the release build is simply unsigned,
+// which keeps `assembleDebug` and CI working for anyone who clones this.
+val signingProps = Properties().apply {
+    val f = File(System.getProperty("user.home"), ".qnote-keys/signing.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -15,6 +25,17 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        if (signingProps.isNotEmpty()) {
+            create("release") {
+                storeFile = file(signingProps.getProperty("storeFile"))
+                storePassword = signingProps.getProperty("storePassword")
+                keyAlias = signingProps.getProperty("keyAlias")
+                keyPassword = signingProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Yields dev.neonfire.qnote.debug, which is the second package
@@ -23,6 +44,7 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

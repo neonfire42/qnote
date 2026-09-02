@@ -15,3 +15,8 @@ qnote-android/local.properties
 *.iml
 .DS_Store
 qnote-watch/.lock-waf_*
+
+# Signing keys — never commit these
+*.jks
+*.keystore
+signing.properties
