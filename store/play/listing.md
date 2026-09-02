@@ -1,5 +1,14 @@
 # Google Play listing — qnote
 
+> **Not published.** There is no Play developer account for qnote yet, so the
+> companion app is distributed as an APK on GitHub releases instead. This file
+> is ready to paste into the Play Console if that changes; nothing else in the
+> project depends on it.
+>
+> While qnote is sideloaded, the download link users are pointed at is
+> `https://github.com/neonfire42/qnote/releases/latest`, which is also the URL
+> baked into the watchapp's `companionApp` block.
+
 Copy for the Play Console. Character limits are Play's, and each field below is
 within them.
 
@@ -57,7 +66,7 @@ qnote asks once which Pebble app may exchange notes with it, and talks to that
 one only. Your notes stay on your phone and your watch. There is no account, no
 server, and no analytics.
 
-The watchapp is a separate install — get the .pbw from the project page.
+The watchapp is a separate install from the Pebble app store.
 ```
 
 ## Category

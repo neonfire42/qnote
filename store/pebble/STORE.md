@@ -36,7 +36,13 @@ you rather than quietly overwriting something you said.
 - Companion Android app for search, categories, editing, sharing and export
 - Store-and-forward delivery for notes captured out of Bluetooth range
 
-Requires a Pebble with a microphone and the companion Android app.
+**You need the companion app.** qnote stores its notes on your phone, so the
+watchapp alone will capture nothing. The companion is a free download from
+GitHub — it is not on the Play Store, so Android will ask you to allow
+installing it from your browser or file manager. Full instructions are on the
+project page.
+
+Requires a Pebble with a microphone.
 
 ## Category
 
@@ -53,11 +59,22 @@ Speak. It's saved.
 
 ## Companion App
 
-qnote needs its Android companion to store the notes it captures:
-https://github.com/neonfire42/qnote
+qnote needs its Android companion to store the notes it captures. It is **not
+on the Google Play Store** — download the APK directly:
 
-The watchapp declares the companion in its `companionApp` block, so the Pebble
-app links the two automatically once both are installed.
+https://github.com/neonfire42/qnote/releases/latest
+
+Installing it:
+
+1. Open that link on your Android phone and download `qnote.apk`.
+2. Android will warn that the file came from an unknown source. Allow your
+   browser (or the Files app) to install apps, then confirm.
+3. Open qnote on the phone once and grant it access to your Pebble app when
+   asked.
+
+The watchapp declares the companion package in its `companionApp` block, so the
+Pebble app pairs the two automatically once both are installed. That declaration
+also carries the download link above, so the Pebble app can point users at it.
 
 ## Version History
 
@@ -73,7 +90,9 @@ app links the two automatically once both are installed.
 
 - A Pebble with a microphone (every model except Pebble Classic and Pebble Steel)
 - Pebble mobile app 1.0.7.7 or newer, or microPebble 1.0.0-alpha35+
-- The qnote Android companion app
+- The qnote Android companion app, sideloaded from GitHub releases
+- Android only. There is no iOS companion, so qnote cannot store notes on an
+  iPhone.
 
 ## Support
 

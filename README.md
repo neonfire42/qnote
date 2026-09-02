@@ -16,6 +16,31 @@ list on the watch; dismissing dictation is silent, so browsing costs one press.
 Turn the phone-side behaviour off under **Dictate when app opens** in the
 overflow menu if you mostly open the app to read.
 
+## Installing
+
+qnote is two installs, and you need both — the watchapp captures notes, the
+phone app is where they live.
+
+**1. The watchapp** — from the Pebble app store, or sideload
+[`qnote-watch.pbw`](https://github.com/neonfire42/qnote/releases/latest) through
+the Pebble mobile app.
+
+**2. The Android companion** — download
+[`qnote.apk`](https://github.com/neonfire42/qnote/releases/latest) on your phone.
+
+It is **not on the Google Play Store**, so Android will warn that it came from an
+unknown source. Allow your browser (or the Files app) to install apps when
+prompted, then confirm. Open qnote once afterwards and grant it access to your
+Pebble app when it asks — it only talks to the one you pick.
+
+**You need:**
+
+- A Pebble with a microphone. That is every model except the original Pebble and
+  Pebble Steel.
+- The Pebble mobile app 1.0.7.7 or newer, or microPebble 1.0.0-alpha35+.
+- **Android.** There is no iOS companion, so qnote cannot store notes from an
+  iPhone.
+
 ## How it works
 
 Pebble has no raw microphone API. The only route to text is the system

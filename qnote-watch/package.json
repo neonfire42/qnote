@@ -28,7 +28,7 @@
     ],
     "companionApp": {
       "android": {
-        "url": "https://github.com/neonfire42/qnote",
+        "url": "https://github.com/neonfire42/qnote/releases/latest",
         "apps": [
           {
             "package": "dev.neonfire.qnote"
