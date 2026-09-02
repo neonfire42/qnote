@@ -1,0 +1,19 @@
+Speak a note into your Pebble. It's on your phone before you lower your wrist.
+
+Opening qnote starts dictation immediately - no menu, no button to find first. Speak, confirm the transcription, and it is saved. Put qnote on a Quick Launch button and a single long press takes you from idea to recorded note.
+
+NEVER LOSES A NOTE. Every note goes out over two paths at once. When your phone is nearby it arrives instantly. When it isn't, the watch spools the note in its own storage and delivers it as soon as you are back in range - even if you closed the app hours earlier.
+
+HONEST ABOUT ITS LIMITS. The watch keeps the last 12 notes, because Pebble gives an app about 4 KB of persistent storage and a note is 256 bytes of it. Your phone is the archive. If all 12 are still waiting to reach the phone, qnote tells you rather than quietly overwriting something you said.
+
+FREE SOFTWARE. qnote is licensed under the GNU General Public License v3. Source for both the watchapp and the companion is on GitHub - read it, change it, pass it on.
+
+YOU NEED THE COMPANION APP. qnote stores its notes on your phone, so the watchapp alone will capture nothing. The companion is a free download from GitHub - it is NOT on the Google Play Store, so Android will ask you to allow installing it from your browser or file manager:
+
+https://github.com/neonfire42/qnote/releases/latest/download/qnote.apk
+
+Android only. There is no iOS companion, so qnote cannot store notes from an iPhone.
+
+Also requires a Pebble with a microphone (every model except the original Pebble and Pebble Steel) and the Pebble mobile app 1.0.7.7 or newer.
+
+On the phone you get categories, full-text search, editing, sharing and Markdown export. No account, no server, no analytics - notes move only between your watch and your phone.

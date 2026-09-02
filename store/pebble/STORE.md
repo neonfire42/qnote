@@ -151,7 +151,21 @@ pebble publish --non-interactive \
   --no-gif-all-platforms
 ```
 
-Two things that bite:
+### What the CLI can and cannot change
+
+`pebble publish` sets `--name`, `--description`, `--category`, `--source` and the
+icons **only when creating a new app**. On an existing app it uploads a new
+release and ignores those flags — the listing text stays whatever it was at
+creation. To change the description, paste
+[`description.txt`](description.txt) into the dashboard:
+https://appstore-api.repebble.com/dashboard
+
+`--is-published` behaves differently in the two cases too. Creating a new app
+makes the app and its first release visible straight away. A later release stays
+**unpublished** until you pass `--is-published` or flip it in the dashboard, so
+the store keeps serving the previous version until you do.
+
+Other things that bite:
 
 - Screenshot filenames must **start with the platform name** (`emery_...`), not
   end with it. The files in this folder are named `screenshot_emery*.png` for
