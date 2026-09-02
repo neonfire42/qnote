@@ -72,14 +72,23 @@ pebble install --emulator emery
 
 ### Android
 
-Needs JDK 17 and an Android SDK with platform 36. `local.properties` points at
-the SDK; the Gradle wrapper handles the rest.
+Needs JDK 17 and an Android SDK with **platform 37**. `local.properties` points
+at the SDK; the Gradle wrapper handles the rest.
 
 ```sh
 cd qnote-android
 ./gradlew testDebugUnitTest       # the C <-> Kotlin record contract
 ./gradlew assembleDebug           # -> app/build/outputs/apk/debug/
 ```
+
+Platform 37 is not a preference: `io.rebble.pebblekit2:common:1.3.0` requires
+consumers to compile against API 37 or later. That in turn rules out AGP 8.x,
+which cannot address the minor-versioned `android-37.0` platform, so the project
+is on **AGP 9.3.2 / Gradle 9.7.1**. AGP 9 supplies Kotlin itself, which is why
+there is no `org.jetbrains.kotlin.android` plugin here — only the Compose one.
+
+Notes are stored in plain SQLite rather than Room, to keep an annotation
+processor (and its Kotlin/KSP version pinning) out of the build.
 
 The debug build's application id is `dev.neonfire.qnote.debug`, which is already
 listed in the watchapp's `companionApp` declaration, so a debug APK pairs with a

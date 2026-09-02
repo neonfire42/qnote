@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,8 +71,12 @@ private fun QNoteApp(
     ).pebbleRepository
 
     // Auto-select is disabled in PebbleRepository, so on first run the user
-    // chooses which Pebble app may exchange their notes with us.
-    var askForPebbleApp by remember { mutableStateOf(!pebble.hasSelectedPebbleApp()) }
+    // chooses which Pebble app may exchange their notes with us. The check
+    // reads DataStore, so it runs in an effect rather than during composition.
+    var askForPebbleApp by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        askForPebbleApp = !pebble.hasSelectedPebbleApp()
+    }
     if (askForPebbleApp) {
         PebbleAppPermissionDialog(
             pebble.appPicker,

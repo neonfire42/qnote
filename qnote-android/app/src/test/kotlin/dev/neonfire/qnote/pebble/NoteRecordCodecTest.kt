@@ -26,11 +26,11 @@ class NoteRecordCodecTest {
             "63616c6c207468652064656e746973740a61626f75742074756573646179" +
             "00".repeat(214)
 
-    // id=3, ts=1788364000, "café — pick up beans" (24 bytes, 20 chars), synced
+    // id=3, ts=1788364000, "café — pick up beans" (23 bytes, 20 chars), synced
     private val utf8Note =
-        "03000000e044986a18000200" +
-            "63616665c3a920e28094207069636b207570206265616e73" +
-            "00".repeat(220)
+        "03000000e044986a17000200" +
+            "636166c3a920e28094207069636b207570206265616e73" +
+            "00".repeat(221)
 
     private fun String.hexToBytes(): ByteArray =
         chunked(2).map { it.toInt(16).toByte() }.toByteArray()
@@ -67,9 +67,9 @@ class NoteRecordCodecTest {
 
         assertEquals(3L, record.id)
         assertEquals("café — pick up beans", record.text)
-        // 20 characters, but 24 bytes: proof text_len is a byte count.
+        // 20 characters, but 23 bytes: proof text_len is a byte count.
         assertEquals(20, record.text.length)
-        assertEquals(24, record.text.toByteArray(Charsets.UTF_8).size)
+        assertEquals(23, record.text.toByteArray(Charsets.UTF_8).size)
     }
 
     @Test

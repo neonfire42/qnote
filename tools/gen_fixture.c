@@ -57,6 +57,6 @@ int main(void) {
   emit("id=2 ts=1788363777 two lines, truncated flag set", 2, 1788363777u,
        "call the dentist\nabout tuesday", QNOTE_FLAG_TRUNCATED);
   emit("id=3 ts=1788364000 multi-byte UTF-8", 3, 1788364000u,
-       "cafe\xc3\xa9 \xe2\x80\x94 pick up beans", QNOTE_FLAG_SYNCED);
+       "caf\xc3\xa9 \xe2\x80\x94 pick up beans", QNOTE_FLAG_SYNCED);
   return 0;
 }

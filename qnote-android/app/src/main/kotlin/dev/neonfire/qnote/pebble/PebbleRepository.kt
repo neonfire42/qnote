@@ -34,7 +34,11 @@ class PebbleRepository(context: Context) {
         DefaultPebbleAndroidAppPicker.getInstance(appContext).apply { enableAutoSelect = false }
     }
 
-    fun hasSelectedPebbleApp(): Boolean = appPicker.getCurrentlySelectedApp() != null
+    /**
+     * Whether the user has already granted a specific Pebble app access.
+     * Suspending because the picker reads it from DataStore.
+     */
+    suspend fun hasSelectedPebbleApp(): Boolean = appPicker.getCurrentlySelectedApp() != null
 
     /** Tells the watch a note is safely stored, so it may drop it from its cache. */
     fun acknowledge(recordId: Long, watch: WatchIdentifier? = null) = send(
