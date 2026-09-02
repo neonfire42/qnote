@@ -21,7 +21,7 @@ overflow menu if you mostly open the app to read.
 qnote is two installs, and you need both — the watchapp captures notes, the
 phone app is where they live.
 
-**1. The watchapp** — from the Pebble app store, or sideload
+**1. The watchapp** — from the [Pebble app store](https://apps.rePebble.com/2d83367c2e4a408a807bd2e5), or sideload
 [`qnote.pbw`](https://github.com/neonfire42/qnote/releases/latest/download/qnote.pbw) through
 the Pebble mobile app.
 

@@ -1,5 +1,10 @@
 # Pebble App Store Listing — qnote
 
+**Live at https://apps.rePebble.com/2d83367c2e4a408a807bd2e5** (app id `2d83367c2e4a408a807bd2e5`).
+
+Edit the listing, changelog and visibility at
+https://appstore-api.repebble.com/dashboard.
+
 ## App Name
 
 qnote
@@ -119,11 +124,32 @@ All captured from the emery QEMU emulator at native 200x228.
 
 ## Publishing
 
+The listing was created with this, which is repeatable for later versions —
+`pebble publish` matches on the PBW's UUID, so a rerun updates the existing app
+rather than making a second one:
+
 ```sh
 cd qnote-watch
 pebble login
-pebble publish
+pebble publish --non-interactive \
+  --name "qnote" \
+  --description "<the description above>" \
+  --category tools \
+  --source "https://github.com/neonfire42/qnote" \
+  --icon-small ../store/pebble/icon_80x80.png \
+  --icon-large ../store/pebble/icon_144x144.png \
+  --screenshots emery_1_listening.png emery_2_list.png emery_3_detail.png \
+  --release-notes "..." \
+  --no-gif-all-platforms
 ```
 
-`pebble publish` prompts for the icons and screenshots; point it at the files in
-this folder.
+Two things that bite:
+
+- Screenshot filenames must **start with the platform name** (`emery_...`), not
+  end with it. The files in this folder are named `screenshot_emery*.png` for
+  readability, so copy them to `emery_*.png` before publishing.
+- `--no-gif-all-platforms` matters. Without it the tool tries to drive the
+  emulator to capture rollover GIFs, which is slow and needs a running QEMU.
+- `--is-published` is documented as defaulting to false, but the listing came out
+  publicly visible anyway. Check the dashboard after publishing if you expected a
+  draft.
