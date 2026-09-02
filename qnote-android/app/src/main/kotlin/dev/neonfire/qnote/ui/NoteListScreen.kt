@@ -225,6 +225,10 @@ private fun NoteCard(
         colors = CardDefaults.cardColors(
             containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer
             else MaterialTheme.colorScheme.surfaceVariant,
+            // The note itself is the thing being read, so it gets the bright
+            // ink. Material would otherwise derive the muted onSurfaceVariant
+            // from the container, which the metadata row below sets explicitly.
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         modifier = Modifier
             .fillMaxWidth()

@@ -32,12 +32,25 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
         compose = true
+    }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs real resources to inflate the theme, and
+            // Roborazzi renders the Compose tree through it.
+            isIncludeAndroidResources = true
+            all {
+                // Write PNGs on every run rather than comparing against a
+                // golden; these are store assets, not regression baselines.
+                it.systemProperty("roborazzi.test.record", "true")
+            }
+        }
     }
 
     sourceSets["main"].java.directories.add("src/main/kotlin")
@@ -45,7 +58,7 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -69,4 +82,10 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

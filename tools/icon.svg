@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The qnote mark: a microphone on GColorVividCerulean (#00AAFF), the accent
+  shared by the watchapp, the Android theme and the launcher icon.
+
+  Single source of truth for every store size. The glyph paths are the same
+  ones in qnote-android/app/src/main/res/drawable/ic_launcher_foreground.xml,
+  scaled up here because a store icon is not mask-cropped the way an Android
+  adaptive icon is, so it can use more of the canvas.
+
+  Render with tools/make_store_assets.py.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108">
+  <rect width="108" height="108" fill="#00AAFF"/>
+  <g transform="translate(54 54) scale(1.34) translate(-54 -54)">
+    <path fill="#FFFFFF"
+          d="M54,34c-4.4,0 -8,3.6 -8,8v14c0,4.4 3.6,8 8,8s8,-3.6 8,-8V42C62,37.6 58.4,34 54,34z"/>
+    <path fill="#FFFFFF"
+          d="M68,54c0,7.7 -6.3,14 -14,14s-14,-6.3 -14,-14h-5c0,9.8 7.3,17.9 17,19.4V80h4v-6.6c9.7,-1.5 17,-9.6 17,-19.4H68z"/>
+  </g>
+</svg>
