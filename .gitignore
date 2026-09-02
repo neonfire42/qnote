@@ -14,3 +14,4 @@ qnote-android/local.properties
 .idea/
 *.iml
 .DS_Store
+qnote-watch/.lock-waf_*
