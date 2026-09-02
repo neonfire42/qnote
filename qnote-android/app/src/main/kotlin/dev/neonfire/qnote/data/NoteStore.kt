@@ -56,6 +56,7 @@ class NoteStore(context: Context) {
             put(COL_RECEIVED_AT, note.receivedAt)
             put(COL_TRUNCATED, if (note.truncated) 1 else 0)
             put(COL_EDITED, if (note.edited) 1 else 0)
+            put(COL_CATEGORY, note.category)
         }
         val rowId = helper.writableDatabase.insertWithOnConflict(
             TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE,
@@ -91,6 +92,16 @@ class NoteStore(context: Context) {
         refresh()
     }
 
+    /** Assigns or clears a note's category. Blank is stored as null. */
+    fun updateCategory(id: String, category: String?) {
+        val values = ContentValues().apply {
+            val cleaned = category?.trim()?.takeIf { it.isNotEmpty() }
+            if (cleaned == null) putNull(COL_CATEGORY) else put(COL_CATEGORY, cleaned)
+        }
+        helper.writableDatabase.update(TABLE, values, "$COL_ID = ?", arrayOf(id))
+        refresh()
+    }
+
     fun find(id: String): Note? =
         helper.readableDatabase
             .query(TABLE, null, "$COL_ID = ?", arrayOf(id), null, null, null)
@@ -114,6 +125,7 @@ class NoteStore(context: Context) {
         receivedAt = getLong(getColumnIndexOrThrow(COL_RECEIVED_AT)),
         truncated = getInt(getColumnIndexOrThrow(COL_TRUNCATED)) != 0,
         edited = getInt(getColumnIndexOrThrow(COL_EDITED)) != 0,
+        category = getString(getColumnIndexOrThrow(COL_CATEGORY)),
     )
 
     private class Helper(context: Context) :
@@ -130,7 +142,8 @@ class NoteStore(context: Context) {
                     $COL_CAPTURED_AT INTEGER NOT NULL,
                     $COL_RECEIVED_AT INTEGER NOT NULL,
                     $COL_TRUNCATED INTEGER NOT NULL DEFAULT 0,
-                    $COL_EDITED INTEGER NOT NULL DEFAULT 0
+                    $COL_EDITED INTEGER NOT NULL DEFAULT 0,
+                    $COL_CATEGORY TEXT
                 )
                 """.trimIndent(),
             )
@@ -138,13 +151,17 @@ class NoteStore(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Only one schema version so far; nothing to migrate from.
+            // v1 -> v2 added categories. Existing notes become uncategorised,
+            // which is why the column is nullable rather than NOT NULL.
+            if (oldVersion < 2) {
+                db.execSQL("ALTER TABLE $TABLE ADD COLUMN $COL_CATEGORY TEXT")
+            }
         }
     }
 
     companion object {
         private const val DB_NAME = "qnote.db"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
 
         private const val TABLE = "notes"
         private const val COL_ID = "id"
@@ -155,5 +172,6 @@ class NoteStore(context: Context) {
         private const val COL_RECEIVED_AT = "received_at"
         private const val COL_TRUNCATED = "truncated"
         private const val COL_EDITED = "edited"
+        private const val COL_CATEGORY = "category"
     }
 }

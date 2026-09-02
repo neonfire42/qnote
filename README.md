@@ -5,9 +5,16 @@ Speak a note into a Pebble watch; manage the list on Android.
 Two halves that talk over [PebbleKit Android 2](https://github.com/pebble-dev/PebbleKitAndroid2):
 
 - **`qnote-watch/`** — a Pebble watchapp in C, targeting emery (Pebble Time 2).
-  Press Select, speak, and the transcription is stored and sent to the phone.
+  Opening it starts a new note: speak, confirm, done.
 - **`qnote-android/`** — a Kotlin/Compose companion that receives the notes,
-  keeps them, and lets you search, edit, share and export them.
+  keeps them, and lets you search, categorise, edit, share and export them.
+
+Both entry points go straight to capture. Opening the watchapp starts dictation
+immediately, and opening the phone app starts dictation *on the watch* — so
+there is no menu between a thought and a recorded note. Back gets you to the
+list on the watch; dismissing dictation is silent, so browsing costs one press.
+Turn the phone-side behaviour off under **Dictate when app opens** in the
+overflow menu if you mostly open the app to read.
 
 ## How it works
 
@@ -107,6 +114,7 @@ pebble screenshot --no-open --emulator emery s.png
 # Pretend to be the phone. send-app-message wants numeric keys, not names:
 pebble send-app-message --emulator emery --app-uuid <uuid> --uint 10003=1  # ACK_ID
 pebble send-app-message --emulator emery --app-uuid <uuid> --uint 10004=1  # DELETE_ID
+pebble send-app-message --emulator emery --app-uuid <uuid> --uint 10006=1  # START_CAPTURE
 
 pebble data-logging --emulator emery list           # the spool session
 ```
@@ -135,7 +143,31 @@ any app claiming to be a Pebble app could receive them.
 
 ### Quick Launch
 
-Assign qnote to a Quick Launch button in the Pebble app. Holding that button
-opens qnote and starts dictating immediately — the fastest path from thought to
-stored note. Every other launch route (the launcher, the phone opening the app)
-shows the list instead.
+Assign qnote to a Quick Launch button in the Pebble app. Holding that button is
+then the fastest path there is: one press, and you are speaking.
+
+## Categories
+
+Categories live on the phone only. The watch record has no room for one — the
+256-byte layout is fixed by datalogging — and sorting is a job for a screen with
+a keyboard.
+
+A category is just a string on a note, so there is no management screen: typing
+a new name in the picker creates it, and deleting the last note that carries one
+retires it. Filter with the chip row above the list, set a category from the
+chip on the detail screen, or long-press notes to select several and categorise
+them in one go. Markdown export groups by category.
+
+## Notes on the design
+
+**The Android app is dark, always.** Its accent is `#00AAFF`, which is
+`GColorVividCerulean` — the exact colour the watchapp uses for its menu
+highlight and timestamps.
+
+**Why `START_CAPTURE` exists.** The watch cannot tell from `launch_reason()`
+whether a phone-initiated launch meant "start dictating" or "just open the app",
+and `pebble install` looks identical to both. The companion therefore launches
+the app and then sends an explicit `START_CAPTURE` message. Since the watchapp
+now dictates on every launch this is mostly belt-and-braces, but it still covers
+the case where the app is already open on the watch. `capture.c` drops a second
+request while a session is running, so the two paths cannot collide.

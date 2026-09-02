@@ -10,6 +10,7 @@ import io.rebble.pebblekit2.common.model.WatchIdentifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -61,13 +62,45 @@ class PebbleRepository(context: Context) {
         "sync request",
     )
 
-    /** Opens qnote on the watch so the user can start dictating from the phone. */
-    fun openOnWatch(onResult: (Boolean) -> Unit = {}) {
+    /**
+     * Opens qnote on the watch and asks it to start dictating.
+     *
+     * Two steps, because the watch cannot infer intent from `launch_reason()`:
+     * that would also fire for someone opening the app from the Pebble app's
+     * locker, and nobody wants a microphone they did not ask for. The explicit
+     * START_CAPTURE message makes the request unambiguous.
+     *
+     * The message can only land once the watchapp is running and has opened its
+     * AppMessage inbox, and there is no event for that, so this retries briefly
+     * rather than firing once into a gap.
+     */
+    fun startCaptureOnWatch(onResult: (Boolean) -> Unit = {}) {
         scope.launch {
-            val results = runCatching { sender.startAppOnTheWatch(QNotePebble.APP_UUID) }
+            val launched = runCatching { sender.startAppOnTheWatch(QNotePebble.APP_UUID) }
                 .onFailure { Log.w(TAG, "startAppOnTheWatch failed", it) }
                 .getOrNull()
-            onResult(results?.values?.any { it is TransmissionResult.Success } == true)
+
+            if (launched?.values?.any { it is TransmissionResult.Success } != true) {
+                onResult(false)
+                return@launch
+            }
+
+            val data = mapOf(QNotePebble.KEY_START_CAPTURE to PebbleDictionaryItem.UInt8(1))
+            repeat(CAPTURE_ATTEMPTS) { attempt ->
+                delay(CAPTURE_RETRY_MS)
+                val results = runCatching {
+                    sender.sendDataToPebble(QNotePebble.APP_UUID, data)
+                }.onFailure { Log.w(TAG, "start capture failed", it) }.getOrNull()
+
+                if (results?.values?.any { it is TransmissionResult.Success } == true) {
+                    onResult(true)
+                    return@launch
+                }
+                Log.i(TAG, "start capture attempt ${attempt + 1} did not land")
+            }
+            // The app is open on the watch either way, so the user can still
+            // press Select. Report the failure so the UI can say so.
+            onResult(false)
         }
     }
 
@@ -101,5 +134,9 @@ class PebbleRepository(context: Context) {
 
     private companion object {
         const val TAG = "QNotePebble"
+
+        /** Roughly how long the watchapp takes to open its AppMessage inbox. */
+        const val CAPTURE_RETRY_MS = 500L
+        const val CAPTURE_ATTEMPTS = 4
     }
 }

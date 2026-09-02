@@ -6,6 +6,12 @@
 
 static DictationSession *s_session;
 static CaptureResultHandler s_handler;
+
+// True between dictation_session_start() and its callback. The watchapp now
+// starts a capture on launch, and the phone may send START_CAPTURE moments
+// later, so the second request has to be dropped rather than restarting a
+// session the user is already speaking into.
+static bool s_in_progress;
 static QNoteRecord s_record;
 
 // Dictation allocates and owns the transcription buffer; we only choose its
@@ -35,9 +41,14 @@ static const char *message_for_status(DictationSessionStatus status) {
 
 static void dictation_callback(DictationSession *session, DictationSessionStatus status,
                                char *transcription, void *context) {
+  s_in_progress = false;
+
   if (status != DictationSessionStatusSuccess) {
     APP_LOG(APP_LOG_LEVEL_INFO, "dictation ended: %d", (int)status);
-    if (s_handler) {
+    // Backing out of dictation is how you reach the list now that every launch
+    // opens the microphone, so it is a normal navigation step, not an error.
+    const bool dismissed = status == DictationSessionStatusFailureTranscriptionRejected;
+    if (s_handler && !dismissed) {
       s_handler(message_for_status(status), false);
     }
     return;
@@ -70,6 +81,10 @@ void capture_start(void) {
     }
     return;
   }
+  if (s_in_progress) {
+    return;
+  }
+  s_in_progress = true;
   dictation_session_start(s_session);
 }
 
@@ -92,4 +107,5 @@ void capture_deinit(void) {
     s_session = NULL;
   }
   s_handler = NULL;
+  s_in_progress = false;
 }

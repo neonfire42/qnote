@@ -5,7 +5,10 @@
 // Called whenever the phone changes the note cache, so the list can redraw.
 typedef void (*SyncChangedHandler)(void);
 
-void sync_init(SyncChangedHandler on_changed);
+// Called when the companion app asks the watch to start dictating.
+typedef void (*SyncCaptureHandler)(void);
+
+void sync_init(SyncChangedHandler on_changed, SyncCaptureHandler on_capture_request);
 void sync_deinit(void);
 
 // Spools a note through datalogging (survives being out of range, delivered

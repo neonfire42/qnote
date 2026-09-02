@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,10 +32,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Cold start only. savedInstanceState is non-null on a rotation or a
+        // process restore, and re-opening the microphone then would be a
+        // surprise rather than a shortcut.
+        val coldStart = savedInstanceState == null
+
         setContent {
-            MaterialTheme {
+            QNoteTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     QNoteApp(
+                        coldStart = coldStart,
                         onShareText = ::shareText,
                         onCopyText = ::copyText,
                     )
@@ -60,10 +67,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun QNoteApp(
+    coldStart: Boolean,
     onShareText: (String) -> Unit,
     onCopyText: (String) -> Unit,
 ) {
     val viewModel: NotesViewModel = viewModel()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
     var openNoteId by remember { mutableStateOf<String?>(null) }
 
     val pebble = QNoteApplication.from(
@@ -91,6 +100,12 @@ private fun QNoteApp(
         )
     }
 
+    LaunchedEffect(coldStart) {
+        if (coldStart && viewModel.autoCapture && pebble.hasSelectedPebbleApp()) {
+            viewModel.startCaptureOnWatch()
+        }
+    }
+
     val note = openNoteId?.let { viewModel.noteById(it) }
     if (note == null) {
         // Covers both "nothing open" and a note deleted while its screen was up.
@@ -103,8 +118,10 @@ private fun QNoteApp(
     } else {
         NoteDetailScreen(
             note = note,
+            categories = categories,
             onBack = { openNoteId = null },
             onSave = { viewModel.updateText(note.id, it) },
+            onSetCategory = { viewModel.setCategory(note.id, it) },
             onDelete = {
                 viewModel.delete(listOf(note.id))
                 openNoteId = null

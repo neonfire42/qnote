@@ -8,6 +8,7 @@
 
 static DataLoggingSessionRef s_log;
 static SyncChangedHandler s_on_changed;
+static SyncCaptureHandler s_on_capture_request;
 
 // Id of the note currently in the AppMessage outbox. 0 means idle. The ack from
 // the phone arrives separately, so we only use this to avoid overlapping sends.
@@ -98,6 +99,13 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
   if (advance || dict_find(iter, MESSAGE_KEY_SYNC_REQUEST)) {
     sync_flush();
   }
+
+  // The companion app was opened and wants a note straight away. This is a
+  // deliberate request rather than an inference from launch_reason(), so
+  // merely opening the watchapp from the phone never trips the microphone.
+  if (dict_find(iter, MESSAGE_KEY_START_CAPTURE) && s_on_capture_request) {
+    s_on_capture_request();
+  }
 }
 
 static void inbox_dropped(AppMessageResult reason, void *context) {
@@ -127,8 +135,9 @@ static void connection_changed(bool connected) {
   }
 }
 
-void sync_init(SyncChangedHandler on_changed) {
+void sync_init(SyncChangedHandler on_changed, SyncCaptureHandler on_capture_request) {
   s_on_changed = on_changed;
+  s_on_capture_request = on_capture_request;
   s_inflight_id = 0;
 
   // resume=true so notes spooled on earlier launches keep their session and
@@ -162,4 +171,5 @@ void sync_deinit(void) {
   // the watch deliver spooled notes after the app closes.
   s_log = NULL;
   s_on_changed = NULL;
+  s_on_capture_request = NULL;
 }

@@ -11,7 +11,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,8 +35,10 @@ import dev.neonfire.qnote.data.Note
 @Composable
 fun NoteDetailScreen(
     note: Note,
+    categories: List<String>,
     onBack: () -> Unit,
     onSave: (String) -> Unit,
+    onSetCategory: (String?) -> Unit,
     onDelete: () -> Unit,
     onShareText: (String) -> Unit,
     onCopyText: (String) -> Unit,
@@ -43,6 +47,19 @@ fun NoteDetailScreen(
     // instead of carrying the previous note's draft across.
     var text by remember(note.id) { mutableStateOf(note.text) }
     val dirty = text != note.text
+    var categorising by remember { mutableStateOf(false) }
+
+    if (categorising) {
+        CategoryPickerDialog(
+            existing = categories,
+            current = note.category,
+            onDismiss = { categorising = false },
+            onPick = {
+                onSetCategory(it)
+                categorising = false
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -89,6 +106,13 @@ fun NoteDetailScreen(
                 onValueChange = { text = it },
                 label = { Text("Note") },
                 modifier = Modifier.fillMaxWidth(),
+            )
+
+            AssistChip(
+                onClick = { categorising = true },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null) },
+                label = { Text(note.category ?: "Add category") },
+                modifier = Modifier.padding(top = 12.dp),
             )
 
             val footnotes = buildList {

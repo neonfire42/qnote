@@ -13,22 +13,22 @@ static void on_capture_result(const char *message, bool success) {
 // The phone acknowledged, deleted, or otherwise changed a note.
 static void on_sync_changed(void) { ui_list_reload(); }
 
+// The companion app opened and asked for a note right away.
+static void on_capture_requested(void) { capture_start(); }
+
 static void init(void) {
   notes_init();
   ui_list_init();
   ui_detail_init();
   capture_init(on_capture_result);
-  sync_init(on_sync_changed);
+  sync_init(on_sync_changed, on_capture_requested);
 
   window_stack_push(ui_list_get_window(), true);
 
-  // Quick Launch is the whole point of a capture app: hold the configured
-  // button and start speaking, no menu in between. Every other launch reason
-  // (launcher, the phone opening the app, a dev install) shows the list, which
-  // is what someone who did not ask for the microphone expects.
-  if (launch_reason() == APP_LAUNCH_QUICK_LAUNCH) {
-    capture_start();
-  }
+  // Opening qnote means capturing a note, whatever route got you here —
+  // launcher, Quick Launch, or the phone. The list is still one Back press
+  // away, and dismissing dictation is silent, so browsing costs one button.
+  capture_start();
 }
 
 static void deinit(void) {

@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
@@ -26,6 +29,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -60,9 +66,14 @@ fun NoteListScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val selection by viewModel.selection.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val hasUncategorised by viewModel.hasUncategorised.collectAsStateWithLifecycle()
+    val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
 
     var searching by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
+    var categorising by remember { mutableStateOf(false) }
+    var autoCapture by remember { mutableStateOf(viewModel.autoCapture) }
     val snackbars = remember { SnackbarHostState() }
 
     LaunchedEffect(message) {
@@ -70,6 +81,18 @@ fun NoteListScreen(
             snackbars.showSnackbar(it)
             viewModel.messageShown()
         }
+    }
+
+    if (categorising) {
+        CategoryPickerDialog(
+            existing = categories,
+            current = null,
+            onDismiss = { categorising = false },
+            onPick = {
+                viewModel.setCategoryForSelection(it)
+                categorising = false
+            },
+        )
     }
 
     Scaffold(
@@ -84,6 +107,9 @@ fun NoteListScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = { categorising = true }) {
+                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Categorise selected")
+                        }
                         IconButton(onClick = { viewModel.delete(selection) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete selected")
                         }
@@ -111,6 +137,18 @@ fun NoteListScreen(
                                     onShareText(viewModel.exportMarkdown())
                                 },
                             )
+                            DropdownMenuItem(
+                                text = { Text("Dictate when app opens") },
+                                leadingIcon = { Icon(Icons.Default.Mic, contentDescription = null) },
+                                trailingIcon = {
+                                    Switch(checked = autoCapture, onCheckedChange = null)
+                                },
+                                onClick = {
+                                    autoCapture = !autoCapture
+                                    viewModel.setAutoCapture(autoCapture)
+                                    menuOpen = false
+                                },
+                            )
                         }
                     },
                 )
@@ -118,7 +156,7 @@ fun NoteListScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = viewModel::openOnWatch,
+                onClick = viewModel::startCaptureOnWatch,
                 icon = { Icon(Icons.Default.Mic, contentDescription = null) },
                 text = { Text("Speak on watch") },
             )
@@ -135,9 +173,18 @@ fun NoteListScreen(
                 )
             }
 
+            if (categories.isNotEmpty() || hasUncategorised) {
+                CategoryChipRow(
+                    categories = categories,
+                    hasUncategorised = hasUncategorised,
+                    selected = categoryFilter,
+                    onSelect = viewModel::setCategoryFilter,
+                )
+            }
+
             if (notes.isEmpty()) {
                 EmptyState(
-                    searching = query.isNotBlank(),
+                    filtered = query.isNotBlank() || categoryFilter !is CategoryFilter.All,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -201,9 +248,9 @@ private fun NoteCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 val marks = buildList {
+                    note.category?.let { add(it) }
                     if (note.truncated) add("truncated on watch")
                     if (note.edited) add("edited")
-                    if (selectionActive && !selected) add("tap to select")
                 }
                 if (marks.isNotEmpty()) {
                     Text(
@@ -218,22 +265,58 @@ private fun NoteCard(
 }
 
 @Composable
-private fun EmptyState(searching: Boolean, modifier: Modifier = Modifier) {
+private fun EmptyState(filtered: Boolean, modifier: Modifier = Modifier) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = if (searching) "No notes match that" else "No notes yet",
+                text = if (filtered) "Nothing in this view" else "No notes yet",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
             )
-            if (!searching) {
+            if (!filtered) {
                 Text(
-                    text = "Open qnote on your watch and speak,\nor use the button below.",
+                    text = "Speak into your watch, or tap below to\nstart dictation from here.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CategoryChipRow(
+    categories: List<String>,
+    hasUncategorised: Boolean,
+    selected: CategoryFilter,
+    onSelect: (CategoryFilter) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = selected is CategoryFilter.All,
+            onClick = { onSelect(CategoryFilter.All) },
+            label = { Text("All") },
+        )
+        categories.forEach { category ->
+            FilterChip(
+                selected = selected == CategoryFilter.Named(category),
+                onClick = { onSelect(CategoryFilter.Named(category)) },
+                label = { Text(category) },
+            )
+        }
+        if (hasUncategorised) {
+            FilterChip(
+                selected = selected is CategoryFilter.Uncategorised,
+                onClick = { onSelect(CategoryFilter.Uncategorised) },
+                label = { Text("Uncategorised") },
+            )
         }
     }
 }

@@ -17,6 +17,7 @@ object QNotePebble {
     const val KEY_ACK_ID = 10003u
     const val KEY_DELETE_ID = 10004u
     const val KEY_SYNC_REQUEST = 10005u
+    const val KEY_START_CAPTURE = 10006u
 
     /** Tag passed to `data_logging_create()` on the watch: "qnt1". */
     const val DATALOG_TAG = 0x716E7431L

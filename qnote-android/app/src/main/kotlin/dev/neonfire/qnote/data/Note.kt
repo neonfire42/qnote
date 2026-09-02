@@ -21,6 +21,14 @@ data class Note(
     val truncated: Boolean,
     /** True once the text differs from what the watch sent. */
     val edited: Boolean,
+    /**
+     * User-assigned category, or null for uncategorised.
+     *
+     * Phone-side only. The watch record has no room for it — the 256-byte
+     * layout is fixed by datalogging — and categorising is a sorting job that
+     * belongs where there is a keyboard.
+     */
+    val category: String? = null,
 ) {
     val title: String
         get() = text.lineSequence().firstOrNull()?.takeIf { it.isNotBlank() } ?: "(empty note)"
