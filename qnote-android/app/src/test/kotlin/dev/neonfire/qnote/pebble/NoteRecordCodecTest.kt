@@ -34,12 +34,18 @@ class NoteRecordCodecTest {
             "636166c3a920e28094207069636b207570206265616e73" +
             "00".repeat(221)
 
+    // id=4, ts=1788364200, "ring the plumber back" (21 bytes), category slot 3
+    private val categorisedNote =
+        "04000000a845986a15000003" +
+            "72696e672074686520706c756d626572206261636b" +
+            "00".repeat(223)
+
     private fun String.hexToBytes(): ByteArray =
         chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     @Test
     fun `fixtures are exactly one record long`() {
-        listOf(plainNote, truncatedNote, utf8Note).forEach {
+        listOf(plainNote, truncatedNote, utf8Note, categorisedNote).forEach {
             assertEquals(NoteRecordCodec.RECORD_SIZE, it.hexToBytes().size)
         }
     }
@@ -72,6 +78,25 @@ class NoteRecordCodecTest {
         // 20 characters, but 23 bytes: proof text_len is a byte count.
         assertEquals(20, record.text.length)
         assertEquals(23, record.text.toByteArray(Charsets.UTF_8).size)
+    }
+
+    @Test
+    fun `reads the category slot a note was tagged with on the watch`() {
+        val record = NoteRecordCodec.decode(categorisedNote.hexToBytes())
+
+        assertEquals(4L, record.id)
+        assertEquals("ring the plumber back", record.text)
+        assertEquals(3, record.categorySlot)
+    }
+
+    @Test
+    fun `a note from a watch that predates categories reads as uncategorised`() {
+        // Offset 11 was `reserved` and always zero before 1.1.0, which is the
+        // same byte value the new field uses for "no category" — so an old
+        // watch and a new one agree without either knowing about the other.
+        val record = NoteRecordCodec.decode(plainNote.hexToBytes())
+
+        assertEquals(0, record.categorySlot)
     }
 
     @Test

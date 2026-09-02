@@ -4,6 +4,7 @@ package dev.neonfire.qnote
 
 import android.app.Application
 import android.content.Context
+import dev.neonfire.qnote.data.CategorySlots
 import dev.neonfire.qnote.data.NoteStore
 import dev.neonfire.qnote.data.Settings
 import dev.neonfire.qnote.pebble.PebbleRepository
@@ -18,6 +19,7 @@ class QNoteApplication : Application() {
     val noteStore: NoteStore by lazy { NoteStore(this) }
     val pebbleRepository: PebbleRepository by lazy { PebbleRepository(this) }
     val settings: Settings by lazy { Settings(this) }
+    val categorySlots: CategorySlots by lazy { CategorySlots(this) }
 
     companion object {
         fun from(context: Context): QNoteApplication =

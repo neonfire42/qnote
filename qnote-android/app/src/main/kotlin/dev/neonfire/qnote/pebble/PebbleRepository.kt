@@ -57,6 +57,24 @@ class PebbleRepository(context: Context) {
         "delete $recordId",
     )
 
+    /**
+     * Hands the watch the categories it should offer after a dictation.
+     *
+     * Sent whenever the list or the setting changes, and again every time the
+     * watchapp opens — that last one is what matters, because it lands while
+     * the user is still speaking, well before the picker is drawn.
+     */
+    fun pushCategories(blob: String, askCategory: Boolean, watch: WatchIdentifier? = null) = send(
+        mapOf(
+            QNotePebble.KEY_CATEGORIES to PebbleDictionaryItem.Text(blob),
+            QNotePebble.KEY_ASK_CATEGORY to PebbleDictionaryItem.UInt8(
+                if (askCategory) 1u else 0u,
+            ),
+        ),
+        watch,
+        "categories (${blob.length} B)",
+    )
+
     /** Asks the watch to resend anything it still holds unacknowledged. */
     fun requestSync(watch: WatchIdentifier? = null) = send(
         mapOf(QNotePebble.KEY_SYNC_REQUEST to PebbleDictionaryItem.UInt8(1)),
@@ -76,7 +94,11 @@ class PebbleRepository(context: Context) {
      * AppMessage inbox, and there is no event for that, so this retries briefly
      * rather than firing once into a gap.
      */
-    fun startCaptureOnWatch(onResult: (Boolean) -> Unit = {}) {
+    fun startCaptureOnWatch(
+        categories: String,
+        askCategory: Boolean,
+        onResult: (Boolean) -> Unit = {},
+    ) {
         scope.launch {
             val launched = runCatching { sender.startAppOnTheWatch(QNotePebble.APP_UUID) }
                 .onFailure { Log.w(TAG, "startAppOnTheWatch failed", it) }
@@ -87,7 +109,17 @@ class PebbleRepository(context: Context) {
                 return@launch
             }
 
-            val data = mapOf(QNotePebble.KEY_START_CAPTURE to PebbleDictionaryItem.UInt8(1))
+            // The category list travels with the start request rather than in
+            // its own message: the watchapp handles CATEGORIES before
+            // START_CAPTURE in the same dictionary, so the picker it may show a
+            // few seconds later is already populated.
+            val data = mapOf(
+                QNotePebble.KEY_CATEGORIES to PebbleDictionaryItem.Text(categories),
+                QNotePebble.KEY_ASK_CATEGORY to PebbleDictionaryItem.UInt8(
+                    if (askCategory) 1u else 0u,
+                ),
+                QNotePebble.KEY_START_CAPTURE to PebbleDictionaryItem.UInt8(1),
+            )
             repeat(CAPTURE_ATTEMPTS) { attempt ->
                 delay(CAPTURE_RETRY_MS)
                 val results = runCatching {

@@ -25,18 +25,20 @@ typedef struct __attribute__((packed)) {
   uint32_t timestamp_utc;
   uint16_t text_len;
   uint8_t flags;
-  uint8_t reserved;
+  uint8_t category_slot;
   char text[QNOTE_TEXT_MAX];
 } QNoteRecord;
 
 _Static_assert(sizeof(QNoteRecord) == 256, "QNoteRecord must be exactly 256 bytes");
 
-static void emit(const char *label, uint32_t id, uint32_t ts, const char *text, uint8_t flags) {
+static void emit(const char *label, uint32_t id, uint32_t ts, const char *text, uint8_t flags,
+                 uint8_t category_slot) {
   QNoteRecord rec;
   memset(&rec, 0, sizeof(rec));
   rec.id = id;
   rec.timestamp_utc = ts;
   rec.flags = flags;
+  rec.category_slot = category_slot;
   size_t len = strlen(text);
   if (len > QNOTE_TEXT_MAX) {
     len = QNOTE_TEXT_MAX;
@@ -55,10 +57,12 @@ static void emit(const char *label, uint32_t id, uint32_t ts, const char *text, 
 int main(void) {
   printf("sizeof(QNoteRecord) = %zu\n\n", sizeof(QNoteRecord));
   emit("id=1 ts=1788363600 \"buy oat milk on the way home\"", 1, 1788363600u,
-       "buy oat milk on the way home", 0);
+       "buy oat milk on the way home", 0, 0);
   emit("id=2 ts=1788363777 two lines, truncated flag set", 2, 1788363777u,
-       "call the dentist\nabout tuesday", QNOTE_FLAG_TRUNCATED);
+       "call the dentist\nabout tuesday", QNOTE_FLAG_TRUNCATED, 0);
   emit("id=3 ts=1788364000 multi-byte UTF-8", 3, 1788364000u,
-       "caf\xc3\xa9 \xe2\x80\x94 pick up beans", QNOTE_FLAG_SYNCED);
+       "caf\xc3\xa9 \xe2\x80\x94 pick up beans", QNOTE_FLAG_SYNCED, 0);
+  emit("id=4 ts=1788364200 categorised on the watch, slot 3", 4, 1788364200u,
+       "ring the plumber back", 0, 3);
   return 0;
 }

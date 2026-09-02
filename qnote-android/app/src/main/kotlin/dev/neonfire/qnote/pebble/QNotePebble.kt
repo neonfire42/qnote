@@ -21,6 +21,12 @@ object QNotePebble {
     const val KEY_SYNC_REQUEST = 10005u
     const val KEY_START_CAPTURE = 10006u
 
+    // Added in 1.1.0, appended to messageKeys so the seven above keep their
+    // numbers. Confirmed against the built appinfo.json.
+    const val KEY_NOTE_CAT = 10007u
+    const val KEY_CATEGORIES = 10008u
+    const val KEY_ASK_CATEGORY = 10009u
+
     /** Tag passed to `data_logging_create()` on the watch: "qnt1". */
     const val DATALOG_TAG = 0x716E7431L
 }

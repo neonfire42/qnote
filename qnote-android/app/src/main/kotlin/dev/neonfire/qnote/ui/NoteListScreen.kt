@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -41,9 +46,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,12 +86,23 @@ fun NoteListScreen(
     var searching by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var categorising by remember { mutableStateOf(false) }
+    // The note a right-swipe opened the picker for, separate from the
+    // multi-select one above.
+    var swipedNote by remember { mutableStateOf<Note?>(null) }
     var autoCapture by remember { mutableStateOf(viewModel.autoCapture) }
+    var askCategory by remember { mutableStateOf(viewModel.askCategoryOnWatch) }
     val snackbars = remember { SnackbarHostState() }
 
     LaunchedEffect(message) {
-        message?.let {
-            snackbars.showSnackbar(it)
+        message?.let { snack ->
+            val result = snackbars.showSnackbar(
+                message = snack.text,
+                actionLabel = if (snack.undoId != null) "Undo" else null,
+                withDismissAction = false,
+            )
+            if (result == SnackbarResult.ActionPerformed && snack.undoId != null) {
+                viewModel.undoDelete(snack.undoId)
+            }
             viewModel.messageShown()
         }
     }
@@ -95,6 +115,18 @@ fun NoteListScreen(
             onPick = {
                 viewModel.setCategoryForSelection(it)
                 categorising = false
+            },
+        )
+    }
+
+    swipedNote?.let { note ->
+        CategoryPickerDialog(
+            existing = categories,
+            current = note.category,
+            onDismiss = { swipedNote = null },
+            onPick = {
+                viewModel.setCategory(note.id, it)
+                swipedNote = null
             },
         )
     }
@@ -161,6 +193,23 @@ fun NoteListScreen(
                                     menuOpen = false
                                 },
                             )
+                            DropdownMenuItem(
+                                text = { Text("Ask for a category on the watch") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Label,
+                                        contentDescription = null,
+                                    )
+                                },
+                                trailingIcon = {
+                                    Switch(checked = askCategory, onCheckedChange = null)
+                                },
+                                onClick = {
+                                    askCategory = !askCategory
+                                    viewModel.setAskCategoryOnWatch(askCategory)
+                                    menuOpen = false
+                                },
+                            )
                         }
                     },
                 )
@@ -205,20 +254,98 @@ fun NoteListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(notes, key = { it.id }) { note ->
-                        NoteCard(
+                        SwipeableNote(
                             note = note,
-                            selected = note.id in selection,
-                            selectionActive = selection.isNotEmpty(),
-                            onClick = {
-                                if (selection.isNotEmpty()) viewModel.toggleSelected(note.id)
-                                else onOpenNote(note)
-                            },
-                            onLongClick = { viewModel.toggleSelected(note.id) },
-                        )
+                            // While a multi-select is running the card is a
+                            // checkbox target, not a swipe target.
+                            gesturesEnabled = selection.isEmpty(),
+                            onDelete = { viewModel.deleteWithUndo(note.id) },
+                            onCategorise = { swipedNote = note },
+                        ) {
+                            NoteCard(
+                                note = note,
+                                selected = note.id in selection,
+                                selectionActive = selection.isNotEmpty(),
+                                onClick = {
+                                    if (selection.isNotEmpty()) viewModel.toggleSelected(note.id)
+                                    else onOpenNote(note)
+                                },
+                                onLongClick = { viewModel.toggleSelected(note.id) },
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Swipe handling for one row: left to delete, right to categorise.
+ *
+ * The two directions are not symmetrical on purpose. Deleting is the
+ * destructive one, so it goes on the away-from-the-thumb stroke and is offered
+ * back through the snackbar; categorising just opens a dialog, so the row is
+ * reset and nothing happens if the dialog is dismissed.
+ */
+@Composable
+private fun SwipeableNote(
+    note: Note,
+    gesturesEnabled: Boolean,
+    onDelete: () -> Unit,
+    onCategorise: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val state = rememberSwipeToDismissBoxState()
+
+    // A right-swipe is a request, not a dismissal: spring the row back once the
+    // dialog is up, or it would sit open behind it.
+    LaunchedEffect(state.currentValue) {
+        if (state.currentValue == SwipeToDismissBoxValue.StartToEnd) {
+            onCategorise()
+            state.reset()
+        }
+    }
+
+    SwipeToDismissBox(
+        state = state,
+        gesturesEnabled = gesturesEnabled,
+        onDismiss = { direction ->
+            if (direction == SwipeToDismissBoxValue.EndToStart) onDelete()
+        },
+        backgroundContent = { SwipeBackground(state.dismissDirection) },
+        content = { content() },
+    )
+}
+
+@Composable
+private fun SwipeBackground(direction: SwipeToDismissBoxValue) {
+    val deleting = direction == SwipeToDismissBoxValue.EndToStart
+    val ground = when (direction) {
+        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+        SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
+        // Settled: nothing is showing through, so paint nothing.
+        SwipeToDismissBoxValue.Settled -> Color.Transparent
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            // Matches the Card the row is made of, so the colour does not show
+            // in the corners.
+            .clip(RoundedCornerShape(12.dp))
+            .background(ground)
+            .padding(horizontal = 20.dp),
+        contentAlignment = if (deleting) Alignment.CenterEnd else Alignment.CenterStart,
+    ) {
+        if (direction == SwipeToDismissBoxValue.Settled) return@Box
+        Icon(
+            imageVector = if (deleting) Icons.Default.Delete else Icons.AutoMirrored.Filled.Label,
+            contentDescription = if (deleting) "Delete" else "Set category",
+            tint = if (deleting) MaterialTheme.colorScheme.onErrorContainer
+            else MaterialTheme.colorScheme.onPrimaryContainer,
+        )
     }
 }
 

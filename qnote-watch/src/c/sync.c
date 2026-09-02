@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include "categories.h"
+
 // Datalogging tag. The companion sees it in DataLogSession.tag and uses it to
 // tell qnote records apart from any other session the watch might send.
 #define QNOTE_DL_TAG 0x716E7431  // "qnt1"
@@ -17,6 +19,10 @@ static SyncCaptureHandler s_on_capture_request;
 static uint32_t s_inflight_id;
 
 static QNoteRecord s_pending;
+
+// Separate from s_pending: catching up the spool at launch must not disturb the
+// record sync_flush() is working through.
+static QNoteRecord s_spooling;
 
 bool sync_is_busy(void) { return s_inflight_id != 0; }
 
@@ -46,6 +52,9 @@ static void send_record(const QNoteRecord *rec) {
   dict_write_uint32(iter, MESSAGE_KEY_NOTE_ID, rec->id);
   dict_write_uint32(iter, MESSAGE_KEY_NOTE_TS, rec->timestamp_utc);
   dict_write_cstring(iter, MESSAGE_KEY_NOTE_TEXT, text);
+  // The datalogging copy carries this in the record itself; AppMessage has to
+  // be told separately, so the two transports describe the same note.
+  dict_write_uint8(iter, MESSAGE_KEY_NOTE_CAT, rec->category_slot);
 
   const AppMessageResult result = app_message_outbox_send();
   if (result == APP_MSG_OK) {
@@ -67,11 +76,41 @@ void sync_flush(void) {
 void sync_submit(const QNoteRecord *rec) {
   if (s_log) {
     const DataLoggingResult result = data_logging_log(s_log, rec, 1);
-    if (result != DATA_LOGGING_SUCCESS) {
+    if (result == DATA_LOGGING_SUCCESS) {
+      notes_mark_spooled(rec->id);
+    } else {
       APP_LOG(APP_LOG_LEVEL_ERROR, "data_logging_log failed: %d", (int)result);
     }
   }
   send_record(rec);
+}
+
+// Spools anything that was stored but never submitted.
+//
+// A note now waits for the category picker before sync_submit() runs, so an app
+// that idles out with the picker open leaves a note in the cache that the
+// durable path never saw. This is the catch-up, and it is why the spool is
+// still the transport that works with the app closed and the phone out of
+// range. The companion deduplicates on "<watchId>:<recordId>", so a note that
+// also reaches it live costs nothing.
+static void spool_pending(void) {
+  if (!s_log) {
+    return;
+  }
+  // Each pass takes the oldest unspooled note and flags it, so the cache size
+  // is a hard bound on the loop.
+  for (int i = 0; i < QNOTE_CACHE_MAX; i++) {
+    if (!notes_next_unspooled(&s_spooling)) {
+      return;
+    }
+    if (data_logging_log(s_log, &s_spooling, 1) != DATA_LOGGING_SUCCESS) {
+      APP_LOG(APP_LOG_LEVEL_ERROR, "backfill spool failed for note %u",
+              (unsigned)s_spooling.id);
+      return;
+    }
+    notes_mark_spooled(s_spooling.id);
+    APP_LOG(APP_LOG_LEVEL_INFO, "note %u spooled late", (unsigned)s_spooling.id);
+  }
 }
 
 static void inbox_received(DictionaryIterator *iter, void *context) {
@@ -84,6 +123,18 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     changed = true;
     // That note is settled, so the queue can move on to the next one.
     advance = true;
+  }
+
+  // The phone's category list. Handled before anything that could start a
+  // capture, so a picker opened in this same message sees the new names.
+  Tuple *cats = dict_find(iter, MESSAGE_KEY_CATEGORIES);
+  if (cats) {
+    categories_set_blob(cats->value->cstring);
+  }
+
+  Tuple *ask = dict_find(iter, MESSAGE_KEY_ASK_CATEGORY);
+  if (ask) {
+    categories_set_ask(ask->value->uint8 != 0);
   }
 
   Tuple *del = dict_find(iter, MESSAGE_KEY_DELETE_ID);
@@ -164,6 +215,7 @@ void sync_init(SyncChangedHandler on_changed, SyncCaptureHandler on_capture_requ
       .pebble_app_connection_handler = connection_changed,
   });
 
+  spool_pending();
   sync_flush();
 }
 

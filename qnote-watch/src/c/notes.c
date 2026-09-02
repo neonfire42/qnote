@@ -149,6 +149,32 @@ void notes_mark_synced(uint32_t id) {
   write_slot(slot_for_index(index), &s_scratch);
 }
 
+void notes_set_category(uint32_t id, uint8_t slot) {
+  const int index = index_of_id(id);
+  if (index < 0) {
+    return;
+  }
+  // index_of_id left the matching record in s_scratch.
+  if (s_scratch.category_slot == slot) {
+    return;  // Already tagged; skip the flash write.
+  }
+  s_scratch.category_slot = slot;
+  write_slot(slot_for_index(index), &s_scratch);
+}
+
+void notes_mark_spooled(uint32_t id) {
+  const int index = index_of_id(id);
+  if (index < 0) {
+    return;
+  }
+  // index_of_id left the matching record in s_scratch.
+  if (s_scratch.flags & QNOTE_FLAG_SPOOLED) {
+    return;  // Already flagged; skip the flash write.
+  }
+  s_scratch.flags |= QNOTE_FLAG_SPOOLED;
+  write_slot(slot_for_index(index), &s_scratch);
+}
+
 void notes_delete_by_id(uint32_t id) {
   const int index = index_of_id(id);
   if (index < 0) {
@@ -171,6 +197,19 @@ bool notes_next_unsynced(QNoteRecord *out) {
   // Oldest first, so the phone receives notes in the order they were spoken.
   for (int i = s_count - 1; i >= 0; i--) {
     if (notes_get(i, out) && !(out->flags & QNOTE_FLAG_SYNCED)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool notes_next_unspooled(QNoteRecord *out) {
+  // A note the phone already acknowledged does not need the spool, whether or
+  // not it ever went through it — that is the case for every note stored by a
+  // version of qnote that predates this flag.
+  for (int i = s_count - 1; i >= 0; i--) {
+    if (notes_get(i, out) &&
+        !(out->flags & (QNOTE_FLAG_SPOOLED | QNOTE_FLAG_SYNCED))) {
       return true;
     }
   }
