@@ -117,7 +117,8 @@ https://github.com/neonfire42/qnote/issues
 |---|---|
 | `screenshot_emery.png` | The note list with sync markers |
 | `screenshot_emery_dictating.png` | Dictation, reached with no button press |
-| `screenshot_emery_detail.png` | Full text of one note |
+| `screenshot_emery_category.png` | Filing a note straight after confirming it |
+| `screenshot_emery_detail.png` | Full text of one note, with its category |
 | `preview_emery.gif` | Rollover animation of the above |
 
 All captured from the emery QEMU emulator at native 200x228.
