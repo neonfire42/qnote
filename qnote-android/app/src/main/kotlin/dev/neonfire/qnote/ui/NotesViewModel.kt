@@ -78,9 +78,7 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
             notes
                 .filterNot { it.id in pending }
                 .filter { filter.matches(it) }
-                .filter {
-                    query.isBlank() || it.text.contains(query.trim(), ignoreCase = true)
-                }
+                .filter { matchesQuery(it, query) }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
@@ -178,6 +176,26 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun noteById(id: String): Note? = store.notes.value.firstOrNull { it.id == id }
+
+    /**
+     * Whether [note] matches free-text search [query].
+     *
+     * Checked against the category too, not just the body: the chip row above
+     * the list narrows by category already, but someone typing "errands" into
+     * the search box has no reason to expect it to fail just because the word
+     * itself is not written anywhere in the note.
+     *
+     * `internal` rather than `private` so [NotesViewModelTest] can exercise it
+     * directly, without needing to drive the reactive [notes] flow through its
+     * `WhileSubscribed` collection lifecycle for what is really a pure
+     * function of one note and one string.
+     */
+    internal fun matchesQuery(note: Note, query: String): Boolean {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return true
+        return note.text.contains(trimmed, ignoreCase = true) ||
+            note.category?.contains(trimmed, ignoreCase = true) == true
+    }
 
     fun toggleSelected(id: String) {
         _selection.value = _selection.value.let { if (id in it) it - id else it + id }
