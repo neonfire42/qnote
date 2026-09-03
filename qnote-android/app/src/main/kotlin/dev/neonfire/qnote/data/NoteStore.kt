@@ -21,6 +21,12 @@ import kotlinx.coroutines.flow.asStateFlow
  * Writes are synchronous and the caller decides which thread to be on. That
  * matters for [upsert]: the listener service must not acknowledge a note to the
  * Pebble app until the row is actually committed.
+ *
+ * Construction itself is synchronous too — it opens the database and loads
+ * every row before returning — which is why
+ * [dev.neonfire.qnote.QNoteApplication.onCreate] touches this class on a
+ * background thread ahead of time rather than leaving the first touch to
+ * whatever asks for it first.
  */
 class NoteStore(context: Context) {
 
@@ -49,22 +55,54 @@ class NoteStore(context: Context) {
      * @return true if this call created the row.
      */
     fun upsert(note: Note): Boolean {
-        val values = ContentValues().apply {
-            put(COL_ID, note.id)
-            put(COL_WATCH_ID, note.watchId)
-            put(COL_RECORD_ID, note.recordId)
-            put(COL_TEXT, note.text)
-            put(COL_CAPTURED_AT, note.capturedAt)
-            put(COL_RECEIVED_AT, note.receivedAt)
-            put(COL_TRUNCATED, if (note.truncated) 1 else 0)
-            put(COL_EDITED, if (note.edited) 1 else 0)
-            put(COL_CATEGORY, note.category)
-        }
         val rowId = helper.writableDatabase.insertWithOnConflict(
-            TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE,
+            TABLE, null, valuesFor(note), SQLiteDatabase.CONFLICT_IGNORE,
         )
         refresh()
         return rowId != -1L
+    }
+
+    /**
+     * Inserts many notes in one transaction, refreshing [notes] once at the
+     * end rather than once per note.
+     *
+     * Exists for a datalogging batch: a dozen spooled records used to mean a
+     * dozen full-table [queryAll] scans and a dozen [notes] emissions — one per
+     * call to [upsert] — for a change that only needs to be visible once the
+     * whole batch has landed.
+     *
+     * @return how many of [notes] were new rows, same meaning as [upsert]'s
+     *   return value, summed.
+     */
+    fun upsertAll(notes: Collection<Note>): Int {
+        if (notes.isEmpty()) return 0
+        val db = helper.writableDatabase
+        var inserted = 0
+        db.beginTransaction()
+        try {
+            notes.forEach { note ->
+                val rowId =
+                    db.insertWithOnConflict(TABLE, null, valuesFor(note), SQLiteDatabase.CONFLICT_IGNORE)
+                if (rowId != -1L) inserted++
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        refresh()
+        return inserted
+    }
+
+    private fun valuesFor(note: Note) = ContentValues().apply {
+        put(COL_ID, note.id)
+        put(COL_WATCH_ID, note.watchId)
+        put(COL_RECORD_ID, note.recordId)
+        put(COL_TEXT, note.text)
+        put(COL_CAPTURED_AT, note.capturedAt)
+        put(COL_RECEIVED_AT, note.receivedAt)
+        put(COL_TRUNCATED, if (note.truncated) 1 else 0)
+        put(COL_EDITED, if (note.edited) 1 else 0)
+        put(COL_CATEGORY, note.category)
     }
 
     fun updateText(id: String, text: String) {

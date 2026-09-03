@@ -93,26 +93,27 @@ class QNoteListenerService : BasePebbleListenerService() {
         }
 
         val now = System.currentTimeMillis()
-        val newCount = withContext(Dispatchers.IO) {
-            records.count { record ->
-                store.upsert(
-                    Note(
-                        id = Note.idFor(watch.value, record.id),
-                        watchId = watch.value,
-                        recordId = record.id,
-                        text = record.text,
-                        capturedAt = record.timestampUtc,
-                        receivedAt = now,
-                        truncated = record.truncated,
-                        edited = false,
-                        // The slot table is append-only, so this resolves to
-                        // the name the note was tagged with however long the
-                        // record sat in the spool.
-                        category = slots.nameFor(record.categorySlot),
-                    )
-                )
-            }
+        val notes = records.map { record ->
+            Note(
+                id = Note.idFor(watch.value, record.id),
+                watchId = watch.value,
+                recordId = record.id,
+                text = record.text,
+                capturedAt = record.timestampUtc,
+                receivedAt = now,
+                truncated = record.truncated,
+                edited = false,
+                // The slot table is append-only, so this resolves to the name
+                // the note was tagged with however long the record sat in the
+                // spool.
+                category = slots.nameFor(record.categorySlot),
+            )
         }
+        // One transaction and one notes-list refresh for the whole batch,
+        // rather than a full table scan per note -- a spooled batch reaching a
+        // dozen records is routine (that is the size of the watch's whole
+        // cache), and nothing needs the list to update mid-batch.
+        val newCount = withContext(Dispatchers.IO) { store.upsertAll(notes) }
         Log.i(TAG, "datalog batch: ${records.size} records, $newCount new, $itemsLeft left")
 
         records.forEach { pebble.acknowledge(it.id, watch) }
