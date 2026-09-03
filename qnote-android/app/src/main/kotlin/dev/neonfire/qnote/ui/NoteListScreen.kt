@@ -53,6 +53,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -255,7 +257,6 @@ fun NoteListScreen(
                 ) {
                     items(notes, key = { it.id }) { note ->
                         SwipeableNote(
-                            note = note,
                             // While a multi-select is running the card is a
                             // checkbox target, not a swipe target.
                             gesturesEnabled = selection.isEmpty(),
@@ -290,38 +291,39 @@ fun NoteListScreen(
  */
 @Composable
 private fun SwipeableNote(
-    note: Note,
     gesturesEnabled: Boolean,
     onDelete: () -> Unit,
     onCategorise: () -> Unit,
     content: @Composable () -> Unit,
 ) {
     val state = rememberSwipeToDismissBoxState()
-
-    // A right-swipe is a request, not a dismissal: spring the row back once the
-    // dialog is up, or it would sit open behind it.
-    LaunchedEffect(state.currentValue) {
-        if (state.currentValue == SwipeToDismissBoxValue.StartToEnd) {
-            onCategorise()
-            state.reset()
-        }
-    }
+    val scope = rememberCoroutineScope()
 
     SwipeToDismissBox(
         state = state,
         gesturesEnabled = gesturesEnabled,
         onDismiss = { direction ->
-            if (direction == SwipeToDismissBoxValue.EndToStart) onDelete()
+            if (direction == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+            } else {
+                // A right-swipe is a request, not a dismissal, so the row has
+                // to be put back. The reset must not be driven from a
+                // LaunchedEffect keyed on the swipe state: resetting changes
+                // that state, which changes the key, which cancels the very
+                // animation that is running — and the row sticks half-open.
+                onCategorise()
+                scope.launch { state.reset() }
+            }
         },
-        backgroundContent = { SwipeBackground(state.dismissDirection) },
+        backgroundContent = { SwipeBackground(state.targetValue) },
         content = { content() },
     )
 }
 
 @Composable
-private fun SwipeBackground(direction: SwipeToDismissBoxValue) {
-    val deleting = direction == SwipeToDismissBoxValue.EndToStart
-    val ground = when (direction) {
+private fun SwipeBackground(target: SwipeToDismissBoxValue) {
+    val deleting = target == SwipeToDismissBoxValue.EndToStart
+    val ground = when (target) {
         SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
         SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
         // Settled: nothing is showing through, so paint nothing.
@@ -339,7 +341,7 @@ private fun SwipeBackground(direction: SwipeToDismissBoxValue) {
             .padding(horizontal = 20.dp),
         contentAlignment = if (deleting) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
-        if (direction == SwipeToDismissBoxValue.Settled) return@Box
+        if (target == SwipeToDismissBoxValue.Settled) return@Box
         Icon(
             imageVector = if (deleting) Icons.Default.Delete else Icons.AutoMirrored.Filled.Label,
             contentDescription = if (deleting) "Delete" else "Set category",

@@ -4,6 +4,7 @@
 
 #include "capture.h"
 #include "categories.h"
+#include "idle.h"
 #include "notes.h"
 #include "sync.h"
 #include "ui_category.h"
@@ -28,6 +29,7 @@ static void init(void) {
   ui_category_init();
   capture_init(on_capture_result);
   sync_init(on_sync_changed, on_capture_requested);
+  idle_init();
 
   window_stack_push(ui_list_get_window(), true);
 
@@ -38,6 +40,7 @@ static void init(void) {
 }
 
 static void deinit(void) {
+  idle_deinit();
   sync_deinit();
   capture_deinit();
   ui_category_deinit();

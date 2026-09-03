@@ -234,6 +234,16 @@ now dictates on every launch this is mostly belt-and-braces, but it still covers
 the case where the app is already open on the watch. `capture.c` drops a second
 request while a session is running, so the two paths cannot collide.
 
+**qnote closes itself after three minutes.** A watchapp holds the screen until
+something takes it away, and qnote is opened dozens of times a day for a few
+seconds each — so one still sitting on the note list is nearly always one the
+wearer walked away from. `idle.c` runs a timer that the list, the detail screen
+and the category picker reset on every button press, and that dictation
+suspends outright, because the system voice UI owns the screen and may sit there
+as long as it likes. On expiry the last window is popped, which ends the app;
+the firmware falls back to the watchface, and there is no API to ask for it
+directly.
+
 ## Releasing
 
 The Android app is sideloaded, so the release APK has to be signed with a key

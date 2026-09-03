@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "categories.h"
+#include "idle.h"
 #include "sync.h"
 #include "ui_list.h"
 #include "util.h"
@@ -42,6 +43,7 @@ static void perform_delete(ActionMenu *menu, const ActionMenuItem *action, void 
 }
 
 static void detail_select(ClickRecognizerRef recognizer, void *context) {
+  idle_poke();
   action_menu_open(&(ActionMenuConfig){
       .root_level = s_action_root,
       .colors = {.background = QNOTE_COLOR_ACCENT, .foreground = GColorWhite},
@@ -91,6 +93,7 @@ static void window_unload(Window *window) {
 // .appear rather than .load: the window is created once and reused, so this is
 // the hook that fires for every note the user opens.
 static void window_appear(Window *window) {
+  idle_poke();
   util_format_stamp((time_t)s_note.timestamp_utc, s_stamp, sizeof(s_stamp));
 
   // Append the category to the stamp line rather than adding a layer: it is one

@@ -3,6 +3,7 @@
 #include "ui_category.h"
 
 #include "categories.h"
+#include "idle.h"
 #include "notes.h"
 #include "util.h"
 
@@ -43,7 +44,13 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   }
 }
 
+static void selection_changed(MenuLayer *menu, MenuIndex new_index, MenuIndex old_index,
+                              void *context) {
+  idle_poke();
+}
+
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
+  idle_poke();
   uint8_t slot = QNOTE_CATEGORY_NONE;
   if (index->row != ROW_NONE) {
     categories_get(index->row - 1, &slot, NULL);
@@ -64,6 +71,7 @@ static void window_load(Window *window) {
                                .draw_header = draw_header,
                                .draw_row = draw_row,
                                .select_click = select_click,
+                               .selection_changed = selection_changed,
                            });
   menu_layer_set_normal_colors(s_menu, QNOTE_COLOR_BG, QNOTE_COLOR_FG);
   menu_layer_set_highlight_colors(s_menu, QNOTE_COLOR_ACCENT, GColorWhite);

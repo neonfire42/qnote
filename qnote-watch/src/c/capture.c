@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "categories.h"
+#include "idle.h"
 #include "notes.h"
 #include "sync.h"
 #include "ui_category.h"
@@ -90,6 +91,8 @@ static void on_category_picked(uint8_t slot) { finish_capture(slot); }
 static void dictation_callback(DictationSession *session, DictationSessionStatus status,
                                char *transcription, void *context) {
   s_in_progress = false;
+  // Our windows are back on screen, so the countdown means something again.
+  idle_resume();
 
   if (status != DictationSessionStatusSuccess) {
     APP_LOG(APP_LOG_LEVEL_INFO, "dictation ended: %d", (int)status);
@@ -136,6 +139,9 @@ void capture_start(void) {
     return;
   }
   s_in_progress = true;
+  // The dictation UI belongs to the system and can sit there as long as it
+  // likes; closing qnote out from under it would be wrong.
+  idle_suspend();
   dictation_session_start(s_session);
 }
 

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "capture.h"
+#include "idle.h"
 #include "notes.h"
 #include "ui_detail.h"
 #include "util.h"
@@ -89,7 +90,15 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   }
 }
 
+// Moving the selection is the only signal we get for the up and down buttons:
+// MenuLayer owns those, so there is no click handler of ours to hang this on.
+static void selection_changed(MenuLayer *menu, MenuIndex new_index, MenuIndex old_index,
+                              void *context) {
+  idle_poke();
+}
+
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
+  idle_poke();
   if (index->section == SECTION_CAPTURE) {
     capture_start();
   } else if (notes_count() > 0) {
@@ -138,6 +147,7 @@ static void window_load(Window *window) {
                                .draw_header = draw_header,
                                .draw_row = draw_row,
                                .select_click = select_click,
+                               .selection_changed = selection_changed,
                            });
   menu_layer_set_normal_colors(s_menu, QNOTE_COLOR_BG, QNOTE_COLOR_FG);
   menu_layer_set_highlight_colors(s_menu, QNOTE_COLOR_ACCENT, GColorWhite);
