@@ -211,6 +211,38 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Saves text shared in from another app -- "Share" on a link, a selection,
+     * anything with a text/plain target -- as a new note.
+     *
+     * A note like this never came from a watch, so it has no watch record id
+     * to key off. It gets a watch id of its own ([SHARED_WATCH_ID]) and the
+     * current time in milliseconds as its record id: unique enough for
+     * something a person triggers by hand through a share sheet, and it can
+     * never collide with a real watch's ids since those live under their own
+     * watch id entirely.
+     */
+    fun saveSharedText(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            store.upsert(
+                Note(
+                    id = Note.idFor(SHARED_WATCH_ID, now),
+                    watchId = SHARED_WATCH_ID,
+                    recordId = now,
+                    text = trimmed,
+                    capturedAt = now / 1000,
+                    receivedAt = now,
+                    truncated = false,
+                    edited = false,
+                ),
+            )
+            _message.value = Snack("Saved to qnote")
+        }
+    }
+
     fun delete(ids: Collection<String>) {
         if (ids.isEmpty()) return
         // Capture the record ids before deleting; afterwards the rows are gone
@@ -415,5 +447,8 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         /** How long a swiped note can still be taken back. */
         const val UNDO_WINDOW_MS = 5_000L
+
+        /** Watch id for a note that came from Android's share sheet, not a watch. */
+        const val SHARED_WATCH_ID = "phone"
     }
 }
