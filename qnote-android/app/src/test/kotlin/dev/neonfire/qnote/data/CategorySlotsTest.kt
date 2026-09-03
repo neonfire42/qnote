@@ -83,6 +83,32 @@ class CategorySlotsTest {
     }
 
     @Test
+    fun `restoring onto an empty table adopts the backup's exact slot numbers`() {
+        // Simulates a fresh install: nothing has been assigned locally yet, so
+        // a note still unsynced on the watch under these numbers must resolve
+        // the same way it did on the old phone.
+        slots.restoreTable(listOf("Errands", "Ideas", "Work"))
+
+        assertEquals("Errands", slots.nameFor(1))
+        assertEquals("Ideas", slots.nameFor(2))
+        assertEquals("Work", slots.nameFor(3))
+        assertEquals(listOf("Errands", "Ideas", "Work"), slots.allNames())
+    }
+
+    @Test
+    fun `restoring onto a table that already has entries merges by name instead`() {
+        // This phone already has its own history -- Errands is slot 1 here --
+        // so the backup's numbering (where Ideas was slot 1) cannot be adopted
+        // wholesale without colliding with it.
+        slots.slotFor("Errands")
+
+        slots.restoreTable(listOf("Ideas", "Errands"))
+
+        assertEquals("Errands", slots.nameFor(1))
+        assertEquals("Ideas", slots.nameFor(2))
+    }
+
+    @Test
     fun `the blob is capped in bytes and drops from the end`() {
         // Two-byte characters, so a character count would overshoot the cap
         // that the watch's buffer is actually measured in.

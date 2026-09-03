@@ -5,8 +5,11 @@ package dev.neonfire.qnote.ui
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import android.app.Application
+import android.content.ContentResolver
+import android.net.Uri
 import dev.neonfire.qnote.QNoteApplication
 import dev.neonfire.qnote.data.Note
+import dev.neonfire.qnote.data.NoteBackup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -307,6 +310,72 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
      * All notes as Markdown, grouped under their category so the export keeps
      * the structure the user built rather than flattening it back to a list.
      */
+    /**
+     * Writes every note to [uri] as JSON, in the format [NoteBackup] can read
+     * back. Unlike Markdown export this round-trips: ids, sync flags and the
+     * category slot table all survive, which is what makes "Restore notes"
+     * onto a new phone actually equivalent to the one it replaces.
+     */
+    fun backupTo(resolver: ContentResolver, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val json = NoteBackup.encode(
+                notes = store.notes.value,
+                categorySlots = slots.allNames(),
+                autoCapture = settings.autoCapture,
+                askCategoryOnWatch = settings.askCategoryOnWatch,
+            )
+            val wrote = runCatching {
+                resolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+            }.isSuccess
+            _message.value = Snack(if (wrote) "Notes backed up" else "Could not write that file")
+        }
+    }
+
+    /**
+     * Reads a backup from [uri] and merges it in.
+     *
+     * Merges rather than replaces, through the same [dev.neonfire.qnote.data.NoteStore.upsert]
+     * the watch's own datalog replay uses: a note already here — even one
+     * edited since the backup was taken — is left alone rather than
+     * overwritten, so restoring is always safe to run more than once.
+     */
+    fun restoreFrom(resolver: ContentResolver, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val text = runCatching {
+                resolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+            }.getOrNull()
+            if (text == null) {
+                _message.value = Snack("Could not read that file")
+                return@launch
+            }
+
+            val backup = try {
+                NoteBackup.decode(text)
+            } catch (e: NoteBackup.FormatException) {
+                _message.value = Snack(e.message ?: "That file is not a qnote backup.")
+                return@launch
+            }
+
+            slots.restoreTable(backup.categorySlots)
+            val added = backup.notes.count { store.upsert(it) }
+            backup.autoCapture?.let { settings.autoCapture = it }
+            backup.askCategoryOnWatch?.let { settings.askCategoryOnWatch = it }
+            // The restored table, or newly-learned names, may not be what the
+            // watch currently has.
+            pushCategoriesToWatch()
+
+            val skipped = backup.notes.size - added
+            _message.value = Snack(
+                when {
+                    backup.notes.isEmpty() -> "That backup had no notes"
+                    skipped == 0 -> "Restored $added notes"
+                    added == 0 -> "Already had all $skipped notes"
+                    else -> "Restored $added notes, $skipped already here"
+                },
+            )
+        }
+    }
+
     fun exportMarkdown(): String = buildString {
         appendLine("# qnote")
         appendLine()

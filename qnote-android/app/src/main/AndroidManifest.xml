@@ -2,9 +2,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      allowBackup is deliberately off. Auto Backup would otherwise upload the
+      whole note database to the user's Google Drive account with no way to
+      opt out per-file, which sits badly with a note-taking app that already
+      treats the Pebble pairing itself as sensitive (see PebbleRepository:
+      auto-select is off there for the same reason). "Back up notes" in the
+      overflow menu is the deliberate alternative: the user picks where the
+      file goes and it round-trips through "Restore notes".
+    -->
     <application
         android:name=".QNoteApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"

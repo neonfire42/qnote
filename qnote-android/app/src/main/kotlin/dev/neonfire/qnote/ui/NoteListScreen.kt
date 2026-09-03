@@ -19,6 +19,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
@@ -76,6 +78,8 @@ fun NoteListScreen(
     onOpenNote: (Note) -> Unit,
     onShareText: (String) -> Unit,
     onOpenAbout: () -> Unit = {},
+    onBackup: () -> Unit = {},
+    onRestore: () -> Unit = {},
 ) {
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -173,6 +177,26 @@ fun NoteListScreen(
                                 onClick = {
                                     menuOpen = false
                                     onShareText(viewModel.exportMarkdown())
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Back up notes") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuOpen = false
+                                    onBackup()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Restore notes") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.CloudDownload, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuOpen = false
+                                    onRestore()
                                 },
                             )
                             DropdownMenuItem(

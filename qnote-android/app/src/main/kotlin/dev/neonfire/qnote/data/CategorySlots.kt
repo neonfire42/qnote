@@ -68,6 +68,36 @@ class CategorySlots(context: Context) {
         names.forEach { slotFor(it) }
     }
 
+    /** Every name in slot order, for a backup: position 0 is slot 1. */
+    fun allNames(): List<String> = table()
+
+    /**
+     * Restores a slot table from a backup.
+     *
+     * Onto an empty table — the common case, setting up a new phone — the
+     * backup's slot numbers are adopted exactly. That is what keeps a note
+     * still sitting unsynced in the watch's cache resolving to the right name
+     * once it finally arrives: the watch has no idea a restore even happened,
+     * so its old slot numbers only mean anything if this table still agrees
+     * with them.
+     *
+     * Onto a table that already has entries of its own, slot numbers from two
+     * separate histories cannot be reconciled in general, so this falls back
+     * to [sync] and only learns names it does not already know. A note tagged
+     * on the watch under an old number before the restore may resolve to the
+     * wrong category, or none, until it next hears back from this phone —
+     * accepted rather than built around, since restoring onto a phone that
+     * already has its own notes is the unusual case.
+     */
+    fun restoreTable(names: List<String>) {
+        val cleaned = names.map { it.trim() }.filter { it.isNotEmpty() }
+        if (table().isEmpty()) {
+            save(cleaned)
+        } else {
+            sync(cleaned)
+        }
+    }
+
     /**
      * The list to push to the watch, as the `"<slot>\t<name>\n"` lines the
      * watchapp parses, truncated to [QNOTE_CAT_BLOB_MAX] bytes.

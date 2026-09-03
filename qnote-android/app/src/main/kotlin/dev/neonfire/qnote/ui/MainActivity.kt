@@ -10,8 +10,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -85,9 +88,19 @@ private fun QNoteApp(
     var openNoteId by remember { mutableStateOf<String?>(null) }
     var showingAbout by remember { mutableStateOf(false) }
 
-    val pebble = QNoteApplication.from(
-        androidx.compose.ui.platform.LocalContext.current
-    ).pebbleRepository
+    val context = LocalContext.current
+    val pebble = QNoteApplication.from(context).pebbleRepository
+
+    // Storage Access Framework: the user picks where the file goes, and reads
+    // it back from wherever they picked it up, rather than qnote reading or
+    // writing anywhere on its own. Backup/restore is a deliberate export, not
+    // a background sync.
+    val backupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> uri?.let { viewModel.backupTo(context.contentResolver, it) } }
+    val restoreLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let { viewModel.restoreFrom(context.contentResolver, it) } }
 
     // Auto-select is disabled in PebbleRepository, so on first run the user
     // chooses which Pebble app may exchange their notes with us. The check
@@ -133,6 +146,8 @@ private fun QNoteApp(
             onOpenNote = { openNoteId = it.id },
             onShareText = onShareText,
             onOpenAbout = { showingAbout = true },
+            onBackup = { backupLauncher.launch("qnote-backup.json") },
+            onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
         )
     } else {
         NoteDetailScreen(

@@ -70,6 +70,26 @@ and roughly 4 KB in total, so the phone is the archive and the watch is a captur
 buffer. If all 12 slots are still unacknowledged, qnote refuses a new capture
 rather than overwriting a note you spoke.
 
+Since the phone is the archive, losing the phone means losing the archive.
+qnote does not use Android's Auto Backup to soften that — `allowBackup` is off,
+so the note database never leaves the device on its own. That is a deliberate
+trade: Auto Backup would otherwise upload every note to the user's Google Drive
+account with no way to exclude it, which sits badly next to a Pebble pairing
+the app already treats as sensitive (auto-select is off there for the same
+reason — see **Pairing it with a real watch** below).
+
+**Back up notes** / **Restore notes**, in the overflow menu, are the deliberate
+replacement. Backup writes a JSON file wherever the user picks — losslessly,
+unlike Markdown export, which is for reading and drops ids, sync flags, and
+turns timestamps into display text. Restore reads that file back and **merges**
+it in through the same `NoteStore.upsert()` the watch's own datalog replay
+uses: a note already on the phone, even one edited since the backup was taken,
+is left alone rather than overwritten, so restoring is always safe to run more
+than once. The file also carries the category slot table — worth doing because
+that table is append-only (see **Categories** below), and a note still
+unsynced in the watch's cache is tagged with a slot number that only means the
+right thing if the table restoring onto a new phone still agrees with it.
+
 ### The wire format
 
 `QNoteRecord`, defined in `qnote-watch/src/c/notes.h` and decoded by
