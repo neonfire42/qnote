@@ -33,21 +33,51 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.neonfire.qnote.QNoteApplication
 import io.rebble.pebblekit2.client.ui.PebbleAppPermissionDialog
 
+/**
+ * Text from a "Share" intent [MainActivity]'s manifest entry advertises for
+ * `text/plain`, or null if [intent] was not one of those.
+ *
+ * A page shared from a browser often carries both a title (`EXTRA_SUBJECT`)
+ * and a URL (`EXTRA_TEXT`); folding the two together keeps that context rather
+ * than saving a bare link with no indication of what it was.
+ *
+ * A plain function of an [Intent] rather than a method on the activity, so
+ * [MainActivityTest] can call it without needing a running Activity --
+ * `internal` for the same reason: visible to the test source set, not to
+ * other modules.
+ */
+internal fun sharedTextFrom(intent: Intent): String? {
+    if (intent.action != Intent.ACTION_SEND || intent.type != "text/plain") return null
+
+    val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.trim()
+    val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()
+    return when {
+        text.isNullOrEmpty() && subject.isNullOrEmpty() -> null
+        subject.isNullOrEmpty() -> text
+        text.isNullOrEmpty() -> subject
+        text.startsWith(subject) -> text
+        else -> "$subject\n\n$text"
+    }
+}
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // Cold start only. savedInstanceState is non-null on a rotation or a
-        // process restore, and re-opening the microphone then would be a
-        // surprise rather than a shortcut.
+        // process restore, and re-opening the microphone -- or resaving text
+        // this activity already saved once -- would be a surprise rather than
+        // a shortcut.
         val coldStart = savedInstanceState == null
+        val sharedText = if (coldStart) sharedTextFrom(intent) else null
 
         setContent {
             QNoteTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     QNoteApp(
                         coldStart = coldStart,
+                        sharedText = sharedText,
                         onShareText = ::shareText,
                         onCopyText = ::copyText,
                         onOpenUrl = ::openUrl,
@@ -79,6 +109,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun QNoteApp(
     coldStart: Boolean,
+    sharedText: String?,
     onShareText: (String) -> Unit,
     onCopyText: (String) -> Unit,
     onOpenUrl: (String) -> Unit,
@@ -127,6 +158,13 @@ private fun QNoteApp(
         if (coldStart && viewModel.autoCapture && pebble.hasSelectedPebbleApp()) {
             viewModel.startCaptureOnWatch()
         }
+    }
+
+    // sharedText comes straight from the Intent that created this Activity
+    // instance and never changes afterward, so this key only ever fires once
+    // per launch -- exactly the "just arrived" moment a share should be saved.
+    LaunchedEffect(sharedText) {
+        sharedText?.let { viewModel.saveSharedText(it) }
     }
 
     if (showingAbout) {

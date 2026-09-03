@@ -9,7 +9,8 @@ Two halves that talk over [PebbleKit Android 2](https://github.com/pebble-dev/Pe
 - **`qnote-android/`** — a Kotlin/Compose companion that receives the notes,
   keeps them, and lets you search, categorise, edit, share and export them.
   Swipe a note left to delete it (with a few seconds to take it back) or right
-  to file it.
+  to file it. It is also a share target: "Share" a link or a selection from
+  any app and it lands here as a note too.
 
 Opening the watchapp goes straight to capture — dictation starts immediately, so
 there is no menu between a thought and a recorded note. Back gets you to the
@@ -202,6 +203,22 @@ any app claiming to be a Pebble app could receive them.
 
 Assign qnote to a Quick Launch button in the Pebble app. Holding that button is
 then the fastest path there is: one press, and you are speaking.
+
+## Sharing into qnote
+
+qnote is registered for `text/plain` shares, so "Share" on a link, a
+selection, a snippet from any app offers it as a destination. A note made this
+way has no watch behind it, so it gets its own watch id (`"phone"`, internal —
+never a real `WatchIdentifier`) and the share's arrival time stands in for
+`recordId`; the `id = "<watchId>:<recordId>"` scheme documented in
+[`Note`](qnote-android/app/src/main/kotlin/dev/neonfire/qnote/data/Note.kt)
+does not otherwise change.
+
+It lands saved, not open for editing — sharing is already the deliberate act,
+the same way choosing to speak into the watch is. Edit or categorise it
+afterwards from the list, same as any other note. A page shared with both a
+title and a link (`EXTRA_SUBJECT` and `EXTRA_TEXT`) keeps both, folded into one
+note, so a shared URL is not saved bare with no indication of what it was.
 
 ## Categories
 

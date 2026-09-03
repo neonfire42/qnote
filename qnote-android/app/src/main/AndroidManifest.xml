@@ -28,6 +28,19 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              Makes qnote a share target: "Share" on a snippet, a link, a
+              selection of text in any app can land here. The phone is the
+              archive, and text someone chose to share is already something
+              they decided was worth keeping, which does not stop being true
+              just because it did not come from a watch.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
 
         <!--
