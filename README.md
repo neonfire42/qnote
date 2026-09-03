@@ -11,12 +11,15 @@ Two halves that talk over [PebbleKit Android 2](https://github.com/pebble-dev/Pe
   Swipe a note left to delete it (with a few seconds to take it back) or right
   to file it.
 
-Both entry points go straight to capture. Opening the watchapp starts dictation
-immediately, and opening the phone app starts dictation *on the watch* — so
+Opening the watchapp goes straight to capture — dictation starts immediately, so
 there is no menu between a thought and a recorded note. Back gets you to the
-list on the watch; dismissing dictation is silent, so browsing costs one press.
-Turn the phone-side behaviour off under **Dictate when app opens** in the
-overflow menu if you mostly open the app to read.
+list; dismissing dictation is silent, so browsing costs one press.
+
+The phone app opens on the note list, with **Speak on watch** a button away. It
+can start dictation on the watch the moment it opens, which makes either device
+one action from talking, but that is off until you ask for it under **Dictate
+when app opens** in the overflow menu — a watch that starts listening because
+you tapped a phone icon is a surprise the first time it happens.
 
 ## Installing
 

@@ -36,9 +36,9 @@ you have lowered your wrist.
 FAST BY DESIGN
 
 Opening the watchapp starts a new note immediately. Assign qnote to a Quick
-Launch button and one long press is all it takes. Opening this phone app starts
-dictation on your watch too, so whichever device is in your hand, you are one
-action from talking.
+Launch button and one long press is all it takes. Turn on "Dictate when app
+opens" and this phone app starts dictation on your watch as well, so whichever
+device is in your hand, you are one action from talking.
 
 NEVER LOSES A NOTE
 

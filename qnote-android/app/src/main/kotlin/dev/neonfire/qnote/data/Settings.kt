@@ -17,13 +17,13 @@ class Settings(context: Context) {
     /**
      * Start dictation on the watch as soon as this app opens.
      *
-     * On by default: qnote exists to capture a thought quickly, and opening the
-     * phone app is one of the two fast paths to that (Quick Launch on the watch
-     * is the other). Turn it off from the overflow menu if you mostly open the
-     * app to read.
+     * Off by default: a watch that starts listening because you opened an app on
+     * your phone is a surprise the first time it happens, and the phone app is
+     * mostly somewhere you go to read. Worth having, worth opting into — the
+     * switch is in the overflow menu.
      */
     var autoCapture: Boolean
-        get() = prefs.getBoolean(KEY_AUTO_CAPTURE, true)
+        get() = prefs.getBoolean(KEY_AUTO_CAPTURE, false)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_CAPTURE, value).apply()
 
     /**

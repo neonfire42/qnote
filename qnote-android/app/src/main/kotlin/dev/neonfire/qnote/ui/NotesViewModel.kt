@@ -254,9 +254,9 @@ class NotesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Opens qnote on the watch and starts dictation there. Also fired once on a
-     * cold start of this app when [autoCapture] is on, which is the whole point
-     * of the setting: open the phone app, start talking.
+     * Opens qnote on the watch and starts dictation there. Normally this is the
+     * "Speak on watch" button; it also fires once on a cold start of this app
+     * for anyone who has opted into [autoCapture].
      *
      * The category list rides in the same message as the start request, so the
      * watch has it before the microphone opens.
