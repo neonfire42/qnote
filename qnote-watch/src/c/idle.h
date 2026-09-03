@@ -12,9 +12,9 @@
 // the watchface when the last window is popped, which is where they wanted to
 // be anyway.
 //
-// Three minutes: long enough to read the longest note qnote can hold twice
-// over, short enough that a forgotten app is not still there at the next glance.
-#define QNOTE_IDLE_TIMEOUT_MS (3 * 60 * 1000)
+// 90 seconds: long enough to read the longest note qnote can hold, short
+// enough that a forgotten app is not still there at the next glance.
+#define QNOTE_IDLE_TIMEOUT_MS (90 * 1000)
 
 void idle_init(void);
 void idle_deinit(void);

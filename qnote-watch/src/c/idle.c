@@ -7,7 +7,7 @@ static bool s_suspended;
 
 static void on_expired(void *data) {
   s_timer = NULL;
-  APP_LOG(APP_LOG_LEVEL_INFO, "idle for %d minutes, closing", QNOTE_IDLE_TIMEOUT_MS / 60000);
+  APP_LOG(APP_LOG_LEVEL_INFO, "idle for %d seconds, closing", QNOTE_IDLE_TIMEOUT_MS / 1000);
   // Popping the last window ends the app, and the firmware falls back to the
   // watchface. There is no API to ask for the watchface directly.
   window_stack_pop_all(false);

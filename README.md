@@ -274,7 +274,7 @@ now dictates on every launch this is mostly belt-and-braces, but it still covers
 the case where the app is already open on the watch. `capture.c` drops a second
 request while a session is running, so the two paths cannot collide.
 
-**qnote closes itself after three minutes.** A watchapp holds the screen until
+**qnote closes itself after 90 seconds.** A watchapp holds the screen until
 something takes it away, and qnote is opened dozens of times a day for a few
 seconds each — so one still sitting on the note list is nearly always one the
 wearer walked away from. `idle.c` runs a timer that the list, the detail screen
