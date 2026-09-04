@@ -280,10 +280,14 @@ for until this version. The phone mints the real slot and pushes it back with
 the rest of the list, same as a category created there. Two things follow
 from the record having nowhere to put a name:
 
-- The **watch's own detail screen** for a note tagged this way has nothing to
-  show until the phone's next push arrives with the slot number: the toast at
-  save time reads the name straight out of what was just spoken, but the
-  stored record only ever gets a slot, and slot 0 has no name of its own.
+- The **watch's own list and detail screen never show this note's category**,
+  even after the phone has resolved the name and pushed the official slot
+  back — that push updates the picker's *name table*, not this specific
+  note's own persisted record, which was written with slot 0 at capture time
+  and is never revisited. The toast at save time is the one moment the watch
+  itself shows the name, reading it straight out of what was just spoken
+  rather than out of the record. The phone's own copy is correct throughout;
+  only the watch's display of that one note stays blank.
 - If the note reaches the phone **solely through the datalogging spool** —
   out of range for the entire round trip — the name is lost and the note
   arrives uncategorised, exactly like a note whose picker was never answered.
