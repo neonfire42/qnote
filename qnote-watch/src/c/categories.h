@@ -24,10 +24,6 @@
 // buttons, so a longer list would be worse, not better.
 #define QNOTE_CAT_MAX 12
 
-// Longest category name the watch will take dictation for. Generous for a
-// short label, tiny next to the AppMessage payload it travels in.
-#define QNOTE_CATEGORY_NAME_MAX 32
-
 void categories_init(void);
 
 // Replaces the list from a CATEGORIES message. Copies, persists, then parses.

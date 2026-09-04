@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 neonfire42
 #include "ui_category.h"
 
-#include <string.h>
-
 #include "capture.h"
 #include "categories.h"
 #include "idle.h"
@@ -14,10 +12,8 @@ static Window *s_window;
 static MenuLayer *s_menu;
 static CategoryPickedHandler s_handler;
 
-// The answer, and whether it has been delivered yet. Back, an existing pick,
-// and a completed "New category" dictation all share one exit path
-// (window_disappear) so the handler cannot fire twice or not at all.
-static uint8_t s_chosen;
+// Whether the answer has been delivered yet, guarding deliver_and_close()
+// against firing twice for the same ui_category_show() call.
 static bool s_delivered;
 
 // True from the moment "New category" starts its dictation until that
@@ -25,15 +21,10 @@ static bool s_delivered;
 // WindowHandlers.disappear fires "when another window is pushed, or this
 // window is popped" -- not only on a real exit. Starting the category-name
 // dictation pushes ITS window on top of this one, which is a .disappear
-// event too, and without this guard that would deliver an answer (None, with
-// nothing spoken yet) before the user has said anything.
+// event too, and window_disappear() only exists to catch Back; without this
+// guard it would treat "covered by our own child dictation" as Back and
+// deliver None before the user has said anything.
 static bool s_awaiting_new_name;
-
-// Set by on_category_name_dictated() on success, read by window_disappear().
-// Empty means "no new name this time" -- cheaper than a separate bool, and
-// there is no such thing as an empty category name to confuse it with
-// (notes_add()-style zero-length input never reaches here).
-static char s_new_category_name[QNOTE_CATEGORY_NAME_MAX + 1];
 
 // Row 0 is "None"; the last row, computed from the live category count, is
 // "New category".
@@ -69,6 +60,26 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   }
 }
 
+// Delivers the answer exactly once and closes the picker. The single call
+// site every path funnels through, so nothing has to depend on whether
+// window_stack_remove() below re-triggers .disappear -- it may not: .disappear
+// fires on a *visibility* change, and by the time this runs the dictation
+// window it may have opened has already closed, leaving this window already
+// the visible one. Popping an already-visible window is not guaranteed to be
+// a visibility change worth reporting, so relying on that second .disappear
+// to deliver (as an earlier version did) could silently drop the answer.
+static void deliver_and_close(uint8_t slot, const char *name) {
+  if (s_delivered) {
+    return;
+  }
+  s_delivered = true;
+  s_awaiting_new_name = false;
+  if (s_handler) {
+    s_handler(slot, name);
+  }
+  window_stack_remove(s_window, true);
+}
+
 static void on_category_name_dictated(const char *name);
 
 static void selection_changed(MenuLayer *menu, MenuIndex new_index, MenuIndex old_index,
@@ -80,9 +91,9 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   idle_poke();
 
   if (index->row == row_new()) {
-    // TEMPORARY DIAGNOSTIC (remove once the reported bug is found): confirms
-    // this row is actually reached and capture_dictate_category_name() is
-    // called, independent of anything that happens afterward.
+    // TEMPORARY DIAGNOSTIC (remove once the reported bug is confirmed fixed):
+    // confirms this row is reached and dictation starts, independent of
+    // anything that happens afterward.
     vibes_short_pulse();
     // The picker window stays on the stack underneath; dictation's own UI
     // takes the screen from here and this window's turn comes once it is
@@ -96,25 +107,11 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   if (index->row != ROW_NONE) {
     categories_get(index->row - 1, &slot, NULL);
   }
-  s_chosen = slot;
-  // Delivery happens in .disappear, which this pop triggers.
-  window_stack_remove(s_window, true);
+  deliver_and_close(slot, NULL);
 }
 
 static void on_category_name_dictated(const char *name) {
-  // Cleared before popping, so the .disappear this triggers is recognised as
-  // the real exit rather than another "covered by a child window" event.
-  s_awaiting_new_name = false;
-
-  if (name) {
-    strncpy(s_new_category_name, name, sizeof(s_new_category_name) - 1);
-    s_new_category_name[sizeof(s_new_category_name) - 1] = '\0';
-  }
-  // Whatever happened -- spoken, dismissed, misheard -- the picker is done.
-  // Dictation failing here costs only the category, the same as backing out
-  // of the picker itself, so there is nothing to fall back to but None: it
-  // does not reopen the menu for another attempt.
-  window_stack_remove(s_window, true);
+  deliver_and_close(QNOTE_CATEGORY_NONE, name);
 }
 
 static void window_load(Window *window) {
@@ -141,28 +138,22 @@ static void window_unload(Window *window) {
   s_menu = NULL;
 }
 
-// The single exit. Select on an existing category sets s_chosen and pops; the
-// "New category" dictation callback pops after (maybe) filling
-// s_new_category_name; Back pops with neither set, which is the right answer
-// for "skip this".
+// Catches the one exit deliver_and_close() cannot see coming: the Back
+// button, which pops this window through the system's own click handling
+// rather than any call site of ours. Every other way out already delivered
+// explicitly by the time this runs, so the guard below makes this a no-op
+// for all of them -- including the "covered by our own child dictation"
+// window-push, which is a .disappear event too and would otherwise read as
+// Back and hand over None before the user has said anything.
 static void window_disappear(Window *window) {
   if (s_awaiting_new_name) {
-    // Covered by the category-name dictation's own window, not a real exit.
     return;
   }
-  if (s_delivered) {
-    return;
-  }
-  s_delivered = true;
-  if (s_handler) {
-    s_handler(s_chosen, s_new_category_name[0] != '\0' ? s_new_category_name : NULL);
-  }
+  deliver_and_close(QNOTE_CATEGORY_NONE, NULL);
 }
 
 void ui_category_show(CategoryPickedHandler handler) {
   s_handler = handler;
-  s_chosen = QNOTE_CATEGORY_NONE;
-  s_new_category_name[0] = '\0';
   s_delivered = false;
   s_awaiting_new_name = false;
   window_stack_push(s_window, true);
