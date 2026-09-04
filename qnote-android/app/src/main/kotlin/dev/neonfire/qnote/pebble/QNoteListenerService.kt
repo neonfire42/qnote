@@ -6,6 +6,7 @@ import android.util.Log
 import dev.neonfire.qnote.QNoteApplication
 import dev.neonfire.qnote.data.CategorySlots
 import dev.neonfire.qnote.data.Note
+import dev.neonfire.qnote.data.NoteStore
 import io.rebble.pebblekit2.client.BasePebbleListenerService
 import io.rebble.pebblekit2.common.model.DataLogSession
 import io.rebble.pebblekit2.common.model.PebbleDictionary
@@ -50,20 +51,19 @@ class QNoteListenerService : BasePebbleListenerService() {
         val newCategoryName =
             (data[QNotePebble.KEY_NEW_CATEGORY_NAME] as? PebbleDictionaryItem.Text)?.value
 
+        val note = Note(
+            id = Note.idFor(watch.value, recordId),
+            watchId = watch.value,
+            recordId = recordId,
+            text = text,
+            capturedAt = capturedAt,
+            receivedAt = System.currentTimeMillis(),
+            truncated = false,
+            edited = false,
+            category = resolveIncomingCategory(slots, categorySlot, newCategoryName),
+        )
         val stored = withContext(Dispatchers.IO) {
-            store.upsert(
-                Note(
-                    id = Note.idFor(watch.value, recordId),
-                    watchId = watch.value,
-                    recordId = recordId,
-                    text = text,
-                    capturedAt = capturedAt,
-                    receivedAt = System.currentTimeMillis(),
-                    truncated = false,
-                    edited = false,
-                    category = resolveIncomingCategory(slots, categorySlot, newCategoryName),
-                )
-            )
+            storeLiveNote(store, note, hasNewCategoryName = !newCategoryName.isNullOrBlank())
         }
         Log.i(TAG, "note $recordId received live (new=$stored)")
 
@@ -206,4 +206,30 @@ internal fun resolveIncomingCategory(
         return trimmed
     }
     return slots.nameFor(categorySlot)
+}
+
+/**
+ * Stores a note received live, correcting for a race [upsert] alone can lose.
+ *
+ * The same note can also be spooled through datalogging, and that copy can
+ * reach [store] first -- it always carries slot 0 for a category the watch
+ * had no slot for yet, since the fixed-size record has nowhere to put the
+ * name. If that uncategorised copy wins the race to create the row, plain
+ * [NoteStore.upsert] leaves it alone, and the category this live message went
+ * to the trouble of sending would be silently lost.
+ *
+ * A freshly spoken name is never a stale replay to guard against, unlike an
+ * ordinary field on a resent note -- the watch attaches one only to the very
+ * first live send of a given note -- so applying it on top of an
+ * already-existing row is always safe here, where overwriting one for any
+ * other reason would not be.
+ *
+ * @return true if this call created the row, same meaning as [NoteStore.upsert].
+ */
+internal fun storeLiveNote(store: NoteStore, note: Note, hasNewCategoryName: Boolean): Boolean {
+    val inserted = store.upsert(note)
+    if (!inserted && hasNewCategoryName) {
+        store.updateCategory(note.id, note.category)
+    }
+    return inserted
 }

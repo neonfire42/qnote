@@ -288,6 +288,20 @@ from the record having nowhere to put a name:
   out of range for the entire round trip — the name is lost and the note
   arrives uncategorised, exactly like a note whose picker was never answered.
   The same note synced live would have kept it.
+- The datalogged copy and the live one are **racing to create the same row**,
+  and datalog can win even when the phone was reachable the whole time — the
+  spool does not wait for the live send to fail first. Before this feature
+  the two copies always agreed (a category was just a slot number, sent both
+  ways), so whichever won the race did not matter. It matters now: the
+  datalogged copy is always uncategorised, and `NoteStore.upsert()`'s ordinary
+  rule — leave an existing row alone, so a datalog replay can never clobber
+  an edit made on the phone — would otherwise silently keep that
+  uncategorised row forever. `QNoteListenerService.storeLiveNote()` is the
+  fix: when the live message carrying a freshly spoken name finds the row
+  already there, it applies the category anyway. That override is safe
+  specifically because a new-category name is never a stale replay — the
+  watch attaches one only to a note's very first live send — which is not
+  true of any other field on the record.
 
 ## Notes on the design
 

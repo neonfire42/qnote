@@ -3,8 +3,12 @@
 package dev.neonfire.qnote.pebble
 
 import dev.neonfire.qnote.data.CategorySlots
+import dev.neonfire.qnote.data.Note
+import dev.neonfire.qnote.data.NoteStore
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,20 +16,37 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
 /**
- * Covers [resolveIncomingCategory]: which name a live note should be stored
+ * Covers [resolveIncomingCategory] -- which name a live note should be stored
  * under, given the numeric slot every watch sends and the new-category text a
- * 1.2.0+ watch sends only when it just minted a category on the spot.
+ * 1.2.0+ watch sends only when it just minted a category on the spot -- and
+ * [storeLiveNote], which corrects for the datalog spool racing that live
+ * message and sometimes winning.
  */
 @RunWith(RobolectricTestRunner::class)
 class QNoteListenerServiceTest {
 
     private lateinit var slots: CategorySlots
+    private lateinit var store: NoteStore
+
+    private fun note(recordId: Long, category: String? = null) = Note(
+        id = Note.idFor("watch-1", recordId),
+        watchId = "watch-1",
+        recordId = recordId,
+        text = "buy oat milk",
+        capturedAt = recordId,
+        receivedAt = 0L,
+        truncated = false,
+        edited = false,
+        category = category,
+    )
 
     @Before
     fun setUp() {
         val context = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("qnote", 0).edit().clear().commit()
+        context.deleteDatabase("qnote.db")
         slots = CategorySlots(context)
+        store = NoteStore(context)
     }
 
     @Test
@@ -76,5 +97,41 @@ class QNoteListenerServiceTest {
         val category = resolveIncomingCategory(slots, 0, newCategoryName = "  Recipes  ")
 
         assertEquals("Recipes", category)
+    }
+
+    @Test
+    fun `a new row is simply inserted with its category, no extra write needed`() {
+        val inserted = storeLiveNote(store, note(1, category = "Recipes"), hasNewCategoryName = true)
+
+        assertTrue(inserted)
+        assertEquals("Recipes", store.find(Note.idFor("watch-1", 1))?.category)
+    }
+
+    @Test
+    fun `an uncategorised row from a datalog replay is corrected once the live category arrives`() {
+        // The bug this guards against: the datalog spool reaches the phone
+        // first with this same note, uncategorised (it has no field for a
+        // name the watch had no slot for). Without the fix, upsert()'s
+        // CONFLICT_IGNORE would leave that row exactly as it arrived.
+        store.upsert(note(1, category = null))
+
+        val inserted = storeLiveNote(store, note(1, category = "Recipes"), hasNewCategoryName = true)
+
+        assertFalse(inserted)
+        assertEquals("Recipes", store.find(Note.idFor("watch-1", 1))?.category)
+    }
+
+    @Test
+    fun `an existing row is left alone when this message carries no new category`() {
+        // The ordinary case a plain retry or a datalog replay of an
+        // already-synced note goes through: nothing here should ever
+        // overwrite a category the user set by hand on the phone.
+        store.upsert(note(1, category = null))
+        store.updateCategory(Note.idFor("watch-1", 1), "Ideas")
+
+        val inserted = storeLiveNote(store, note(1, category = "Errands"), hasNewCategoryName = false)
+
+        assertFalse(inserted)
+        assertEquals("Ideas", store.find(Note.idFor("watch-1", 1))?.category)
     }
 }
