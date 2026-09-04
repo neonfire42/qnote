@@ -228,10 +228,12 @@ retires it. Filter with the chip row above the list, set one from the chip on
 the detail screen, swipe a note right, or long-press to select several and
 categorise them in one go. Markdown export groups by category.
 
-Categories are created on the phone, where the keyboard is, but they can be
-**applied on the watch**. Confirm a dictation and qnote offers the categories it
-knows about; Back skips in one press and the note is saved either way. Turn the
-prompt off under **Ask for a category on the watch** in the overflow menu.
+Categories are usually typed on the phone, where the keyboard is, but they can
+be **both applied and created on the watch**. Confirm a dictation and qnote
+offers the categories it knows about, plus **New category** at the bottom —
+speak a name there and it applies immediately, the same as picking an existing
+one. Back skips in one press and the note is saved either way. Turn the prompt
+off under **Ask for a category on the watch** in the overflow menu.
 
 ### How a category survives the trip
 
@@ -259,6 +261,33 @@ otherwise leave a note the durable spool never saw — so `flags` bit 2 records
 which notes reached datalogging, and `sync_init()` spools anything that did not.
 A note whose picker was never answered keeps exactly the durability of any
 other; it just arrives uncategorised.
+
+### Speaking a brand-new category
+
+**New category** hands off to the same dictation session `capture_start()`
+uses for the note itself, just in a different mode — there is deliberately
+only one `DictationSession` in the whole app. An earlier version gave the
+picker its own, independently created session, correct by the SDK's letter
+(only one session may be *started* at a time) but not in practice: a single
+transcription answer reached both sessions' callbacks at once, turning one
+spoken category into a second, spurious note. Every other dictation in this
+app already reuses one session across many captures without issue, so
+category-name entry now follows that same proven path instead.
+
+A name spoken this way has no slot yet — the watch has never been told one —
+so it rides to the phone as text, in a field the wire format didn't have room
+for until this version. The phone mints the real slot and pushes it back with
+the rest of the list, same as a category created there. Two things follow
+from the record having nowhere to put a name:
+
+- The **watch's own detail screen** for a note tagged this way has nothing to
+  show until the phone's next push arrives with the slot number: the toast at
+  save time reads the name straight out of what was just spoken, but the
+  stored record only ever gets a slot, and slot 0 has no name of its own.
+- If the note reaches the phone **solely through the datalogging spool** —
+  out of range for the entire round trip — the name is lost and the note
+  arrives uncategorised, exactly like a note whose picker was never answered.
+  The same note synced live would have kept it.
 
 ## Notes on the design
 

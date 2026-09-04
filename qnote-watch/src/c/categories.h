@@ -24,6 +24,10 @@
 // buttons, so a longer list would be worse, not better.
 #define QNOTE_CAT_MAX 12
 
+// Longest category name the watch will take dictation for. Generous for a
+// short label, tiny next to the AppMessage payload it travels in.
+#define QNOTE_CATEGORY_NAME_MAX 32
+
 void categories_init(void);
 
 // Replaces the list from a CATEGORIES message. Copies, persists, then parses.
@@ -37,8 +41,9 @@ int categories_count(void);
 // index 0 is the first category the phone sent. Returns false if out of range.
 bool categories_get(int index, uint8_t *out_slot, const char **out_name);
 
-// True when a picker is worth showing: the phone asked for one and there is at
-// least one category to pick.
+// True when a picker is worth showing: the phone asked for one. Unlike
+// earlier versions this no longer requires an existing category -- the picker
+// always offers "New category", so it is useful even the very first time.
 bool categories_should_ask(void);
 
 // Name for a slot, or NULL if this watch has not been told about it.

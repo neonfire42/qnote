@@ -27,6 +27,10 @@ object QNotePebble {
     const val KEY_CATEGORIES = 10008u
     const val KEY_ASK_CATEGORY = 10009u
 
+    // Added in 1.2.0, appended for the same reason. Confirmed against the
+    // built appinfo.json: 10010.
+    const val KEY_NEW_CATEGORY_NAME = 10010u
+
     /** Tag passed to `data_logging_create()` on the watch: "qnt1". */
     const val DATALOG_TAG = 0x716E7431L
 }

@@ -16,7 +16,10 @@ void sync_deinit(void);
 // Spools a note through datalogging (survives being out of range, delivered
 // even if the app is closed) and, when the phone is reachable, sends it over
 // AppMessage too so it lands immediately. The companion deduplicates by id.
-void sync_submit(const QNoteRecord *rec);
+//
+// new_category_name, if not NULL, rides along on the AppMessage copy only --
+// the datalogged record has no room for a name, just rec->category_slot.
+void sync_submit(const QNoteRecord *rec, const char *new_category_name);
 
 // Sends the oldest note the phone has not acknowledged, if any.
 void sync_flush(void);

@@ -26,7 +26,7 @@ static QNoteRecord s_spooling;
 
 bool sync_is_busy(void) { return s_inflight_id != 0; }
 
-static void send_record(const QNoteRecord *rec) {
+static void send_record(const QNoteRecord *rec, const char *new_category_name) {
   if (s_inflight_id != 0) {
     return;  // One at a time; sync_flush() picks the rest up later.
   }
@@ -55,10 +55,18 @@ static void send_record(const QNoteRecord *rec) {
   // The datalogging copy carries this in the record itself; AppMessage has to
   // be told separately, so the two transports describe the same note.
   dict_write_uint8(iter, MESSAGE_KEY_NOTE_CAT, rec->category_slot);
+  // A category typed on the spot rather than picked: the watch has no slot
+  // for it, so it rides as text instead, only on this live copy. The phone
+  // mints the slot and hands it back on its next category push.
+  if (new_category_name) {
+    dict_write_cstring(iter, MESSAGE_KEY_NEW_CATEGORY_NAME, new_category_name);
+  }
 
   const AppMessageResult result = app_message_outbox_send();
   if (result == APP_MSG_OK) {
     s_inflight_id = rec->id;
+    APP_LOG(APP_LOG_LEVEL_INFO, "sending note %u (slot %u%s)", (unsigned)rec->id,
+            rec->category_slot, new_category_name ? ", new category" : "");
   } else {
     APP_LOG(APP_LOG_LEVEL_WARNING, "outbox_send failed: %d", (int)result);
   }
@@ -68,12 +76,17 @@ void sync_flush(void) {
   if (s_inflight_id != 0) {
     return;
   }
+  // A retried send never carries a new category name: by the time a note is
+  // being resent, either the first attempt already told the phone (nothing
+  // left to say), or it did not and the name only ever lived in a local
+  // variable in capture.c that is long gone. Documented alongside
+  // finish_capture() as the one place a freshly typed category can be lost.
   if (notes_next_unsynced(&s_pending)) {
-    send_record(&s_pending);
+    send_record(&s_pending, NULL);
   }
 }
 
-void sync_submit(const QNoteRecord *rec) {
+void sync_submit(const QNoteRecord *rec, const char *new_category_name) {
   if (s_log) {
     const DataLoggingResult result = data_logging_log(s_log, rec, 1);
     if (result == DATA_LOGGING_SUCCESS) {
@@ -82,7 +95,7 @@ void sync_submit(const QNoteRecord *rec) {
       APP_LOG(APP_LOG_LEVEL_ERROR, "data_logging_log failed: %d", (int)result);
     }
   }
-  send_record(rec);
+  send_record(rec, new_category_name);
 }
 
 // Spools anything that was stored but never submitted.

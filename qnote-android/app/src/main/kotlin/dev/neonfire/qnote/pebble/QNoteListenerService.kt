@@ -4,6 +4,7 @@ package dev.neonfire.qnote.pebble
 
 import android.util.Log
 import dev.neonfire.qnote.QNoteApplication
+import dev.neonfire.qnote.data.CategorySlots
 import dev.neonfire.qnote.data.Note
 import io.rebble.pebblekit2.client.BasePebbleListenerService
 import io.rebble.pebblekit2.common.model.DataLogSession
@@ -44,6 +45,10 @@ class QNoteListenerService : BasePebbleListenerService() {
         // Absent from a watch older than 1.1.0, which is exactly the same thing
         // as uncategorised.
         val categorySlot = data.longAt(QNotePebble.KEY_NOTE_CAT)?.toInt() ?: 0
+        // Present only when the watch just spoke a category it had no slot
+        // for yet -- see resolveIncomingCategory().
+        val newCategoryName =
+            (data[QNotePebble.KEY_NEW_CATEGORY_NAME] as? PebbleDictionaryItem.Text)?.value
 
         val stored = withContext(Dispatchers.IO) {
             store.upsert(
@@ -56,7 +61,7 @@ class QNoteListenerService : BasePebbleListenerService() {
                     receivedAt = System.currentTimeMillis(),
                     truncated = false,
                     edited = false,
-                    category = slots.nameFor(categorySlot),
+                    category = resolveIncomingCategory(slots, categorySlot, newCategoryName),
                 )
             )
         }
@@ -173,4 +178,32 @@ class QNoteListenerService : BasePebbleListenerService() {
     private companion object {
         const val TAG = "QNoteListener"
     }
+}
+
+/**
+ * The category a note should be stored under, given what a live AppMessage
+ * said.
+ *
+ * A freshly spoken watch category ([QNotePebble.KEY_NEW_CATEGORY_NAME]) always
+ * wins over the numeric slot: the watch has no slot for a name it just
+ * invented, so it sends [categorySlot] as 0 in that case anyway, and calling
+ * [CategorySlots.slotFor] here is what mints the real slot the watch learns
+ * about on the next category push.
+ *
+ * A plain function of its arguments -- no [QNoteListenerService] instance
+ * needed -- so [QNoteListenerServiceTest] can call it directly rather than
+ * constructing a [io.rebble.pebblekit2.common.model.PebbleDictionary] and a
+ * running service to exercise one branch of logic.
+ */
+internal fun resolveIncomingCategory(
+    slots: CategorySlots,
+    categorySlot: Int,
+    newCategoryName: String?,
+): String? {
+    val trimmed = newCategoryName?.trim()
+    if (!trimmed.isNullOrEmpty()) {
+        slots.slotFor(trimmed)
+        return trimmed
+    }
+    return slots.nameFor(categorySlot)
 }

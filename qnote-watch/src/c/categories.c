@@ -114,7 +114,7 @@ bool categories_get(int index, uint8_t *out_slot, const char **out_name) {
   return true;
 }
 
-bool categories_should_ask(void) { return s_ask && s_count > 0; }
+bool categories_should_ask(void) { return s_ask; }
 
 const char *categories_name_for(uint8_t slot) {
   if (slot == 0) {

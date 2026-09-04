@@ -23,8 +23,15 @@ static bool s_in_progress;
 // True between storing a note and the category picker answering. capture_start()
 // bails while this is set: the phone can send START_CAPTURE at any moment, and
 // a second dictation would overwrite s_record while the picker still refers to
-// the note it holds.
+// the note it holds. Also covers the "New category" sub-dictation below, which
+// happens entirely within this same window.
 static bool s_awaiting_category;
+
+// True while s_session is being used to type a category name rather than
+// capture a note -- read by dictation_callback() to route its result
+// correctly, since both uses share the one session (see below).
+static bool s_dictating_category_name;
+static CategoryNameHandler s_category_name_handler;
 
 static QNoteRecord s_record;
 
@@ -58,41 +65,62 @@ static const char *message_for_status(DictationSessionStatus status) {
 }
 
 // Sends the note the record buffer holds and reports it. Reached either
-// straight from the transcription or, when the picker was shown, once it has an
-// answer — the note is stored either way, so this only ever adds the tag and
-// hands the record to both transports.
-static void finish_capture(uint8_t slot) {
+// straight from the transcription, or once the picker has an answer -- the
+// note is stored either way, so this only ever adds the tag and hands the
+// record to both transports.
+//
+// new_category_name is non-NULL exactly when the user spoke a brand-new
+// category on the spot: the watch has no slot for it, so slot is left at
+// QNOTE_CATEGORY_NONE on the record and the name rides to the phone as a
+// separate field of the same live AppMessage. The phone mints the real slot
+// and hands it back on its next category push -- this note's own datalogged
+// copy, though, only ever carries a number, so if it reaches the phone solely
+// through the spool (out of range the whole time), it arrives uncategorised.
+// That is a corner of the 256-byte record leaving no room for a name, not a
+// bug: the same note synced live would have kept its category.
+static void finish_capture(uint8_t slot, const char *new_category_name) {
   s_awaiting_category = false;
 
-  const char *name = NULL;
-  if (slot != QNOTE_CATEGORY_NONE) {
+  const char *display_name = new_category_name;
+  if (!display_name && slot != QNOTE_CATEGORY_NONE) {
     notes_set_category(s_record.id, slot);
     s_record.category_slot = slot;
-    name = categories_name_for(slot);
+    display_name = categories_name_for(slot);
   }
 
-  sync_submit(&s_record);
+  sync_submit(&s_record, new_category_name);
   vibes_short_pulse();
   ui_list_reload();
 
   if (!s_handler) {
     return;
   }
-  if (name) {
-    snprintf(s_saved_message, sizeof(s_saved_message), "Saved to\n%s", name);
+  if (display_name) {
+    snprintf(s_saved_message, sizeof(s_saved_message), "Saved to\n%s", display_name);
     s_handler(s_saved_message, true);
   } else {
     s_handler("Saved", true);
   }
 }
 
-static void on_category_picked(uint8_t slot) { finish_capture(slot); }
+static void on_category_picked(uint8_t slot, const char *name) { finish_capture(slot, name); }
 
 static void dictation_callback(DictationSession *session, DictationSessionStatus status,
                                char *transcription, void *context) {
   s_in_progress = false;
   // Our windows are back on screen, so the countdown means something again.
   idle_resume();
+
+  if (s_dictating_category_name) {
+    s_dictating_category_name = false;
+    CategoryNameHandler handler = s_category_name_handler;
+    s_category_name_handler = NULL;
+    if (handler) {
+      const bool got_name = status == DictationSessionStatusSuccess && transcription[0] != '\0';
+      handler(got_name ? transcription : NULL);
+    }
+    return;
+  }
 
   if (status != DictationSessionStatusSuccess) {
     APP_LOG(APP_LOG_LEVEL_INFO, "dictation ended: %d", (int)status);
@@ -123,7 +151,7 @@ static void dictation_callback(DictationSession *session, DictationSessionStatus
         ui_category_show(on_category_picked);
         return;
       }
-      finish_capture(QNOTE_CATEGORY_NONE);
+      finish_capture(QNOTE_CATEGORY_NONE, NULL);
       return;
   }
 }
@@ -141,6 +169,23 @@ void capture_start(void) {
   s_in_progress = true;
   // The dictation UI belongs to the system and can sit there as long as it
   // likes; closing qnote out from under it would be wrong.
+  idle_suspend();
+  dictation_session_start(s_session);
+}
+
+// Deliberately reuses s_session rather than a second DictationSession object.
+// An earlier version gave the category picker its own session, created once
+// at startup and started independently of this one -- correct by the SDK's
+// documented contract (only one session may be *started* at a time), but in
+// practice a transcription answer reached both sessions' callbacks at once,
+// producing a stray note out of text that was only ever meant to be a
+// category name. Every other dictation in this app reuses one session across
+// many captures without issue, so this mode flag brings category-name entry
+// in line with that already-proven pattern instead of the untested
+// two-objects one.
+void capture_dictate_category_name(CategoryNameHandler handler) {
+  s_dictating_category_name = true;
+  s_category_name_handler = handler;
   idle_suspend();
   dictation_session_start(s_session);
 }
@@ -166,4 +211,6 @@ void capture_deinit(void) {
   s_handler = NULL;
   s_in_progress = false;
   s_awaiting_category = false;
+  s_dictating_category_name = false;
+  s_category_name_handler = NULL;
 }
