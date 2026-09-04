@@ -115,8 +115,17 @@ static void dictation_callback(DictationSession *session, DictationSessionStatus
     s_dictating_category_name = false;
     CategoryNameHandler handler = s_category_name_handler;
     s_category_name_handler = NULL;
+    const bool got_name = status == DictationSessionStatusSuccess && transcription[0] != '\0';
+    // TEMPORARY DIAGNOSTIC (remove once the reported bug is found): confirms
+    // this callback actually fires for the category-name dictation, and
+    // whether it is reporting success. Double pulse = got a name; long pulse
+    // = did not (wrong status, or an empty transcription despite Success).
+    if (got_name) {
+      vibes_double_pulse();
+    } else {
+      vibes_long_pulse();
+    }
     if (handler) {
-      const bool got_name = status == DictationSessionStatusSuccess && transcription[0] != '\0';
       handler(got_name ? transcription : NULL);
     }
     return;

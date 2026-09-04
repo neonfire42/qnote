@@ -80,6 +80,10 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   idle_poke();
 
   if (index->row == row_new()) {
+    // TEMPORARY DIAGNOSTIC (remove once the reported bug is found): confirms
+    // this row is actually reached and capture_dictate_category_name() is
+    // called, independent of anything that happens afterward.
+    vibes_short_pulse();
     // The picker window stays on the stack underneath; dictation's own UI
     // takes the screen from here and this window's turn comes once it is
     // done, in on_category_name_dictated().
